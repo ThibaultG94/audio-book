@@ -208,3 +208,23 @@ __marimo__/
 
 .wav
 .mp3
+
+# Frontend specific
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+frontend/.env.local
+
+# Backend specific
+backend/__pycache__/
+backend/.pytest_cache/
+backend/storage/
+
+# Build artifacts
+build/
+dist/
+
+# Development
+.env
+captain-definition.local
+EOF

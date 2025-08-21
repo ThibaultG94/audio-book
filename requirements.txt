@@ -1,7 +1,0 @@
-# pip install -r requirements.txt
-
-piper-tts
-PyPDF2
-ebooklib
-beautifulsoup4
-lxml
