@@ -5,3 +5,9 @@ python-multipart==0.0.6
 
 # Configuration
 pydantic-settings==2.1.0
+
+# Text extraction dependencies  
+PyPDF2==3.0.1
+ebooklib==0.18.0
+beautifulsoup4==4.12.2
+lxml==4.9.3
