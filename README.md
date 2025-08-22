@@ -1,41 +1,54 @@
 # Audio Book Converter
 
-Convert PDF and EPUB documents to high-quality audio books using AI-powered text-to-speech technology.
+Convert PDF and EPUB documents to high-quality audio books using AI-powered text-to-speech technology with Piper TTS.
 
 ## 🚀 Quick Start
 
-### Development Setup
+### One-time Setup
 
 ```bash
-# Clone and navigate to project
+# Clone and setup the project
 git clone <repo-url>
-cd audio-book-app
+cd audio-book
 
-# Start development servers
-make dev
+# Initial setup (creates venv, installs dependencies)
+make setup
 ```
 
-### Production Deployment (CapRover)
+### Development
+
+```bash
+# Start both backend and frontend
+make dev
+
+# Or start individually
+make backend    # Python FastAPI server (port 8000)
+make frontend   # Next.js app (port 3000)
+```
+
+### Production Deployment
 
 ```bash
 # Build and deploy to CapRover
+make build
 make deploy
 ```
 
 ## 🏗️ Architecture
 
 - **Backend**: Python FastAPI with Piper TTS engine
-- **Frontend**: Next.js with TypeScript and TailwindCSS
+- **Frontend**: Next.js 15 with TypeScript and TailwindCSS
 - **Deployment**: Docker multi-stage build + CapRover
 - **Storage**: Local file system (uploads + generated audio)
+- **TTS Engine**: Piper (offline neural text-to-speech)
 
 ## 📁 Project Structure
 
 ```
-audio-book-app/
+audio-book/
 ├── backend/                          # Python FastAPI backend
 │   ├── app/
-│   │   ├── main.py                   # FastAPI app entry point
+│   │   ├── main.py                   # FastAPI application entry point
 │   │   ├── api/routes/               # API endpoints (upload, convert, audio)
 │   │   ├── services/                 # Business logic (TTS, text processing)
 │   │   ├── models/                   # Pydantic schemas and enums
@@ -43,17 +56,33 @@ audio-book-app/
 │   ├── tests/                        # Backend tests (unit + integration)
 │   ├── voices/                       # TTS voice models (.onnx files)
 │   ├── storage/                      # File storage (uploads + outputs)
-│   └── requirements.txt              # Python dependencies
+│   ├── venv/                         # Python virtual environment
+│   ├── requirements.txt              # Production dependencies
+│   └── requirements-dev.txt          # Development dependencies
 ├── frontend/                         # Next.js frontend
 │   ├── src/
 │   │   ├── app/                      # Next.js App Router pages
 │   │   ├── components/               # React components
 │   │   ├── lib/                      # API client and utilities
-│   │   └── hooks/                    # Custom React hooks
+│   │   └── hooks/                    # Custom React hooks (future)
+│   ├── node_modules/                 # Node.js dependencies
 │   └── package.json                  # Node.js dependencies
-├── docker/                           # Docker configuration
-├── scripts/                          # Build and deployment scripts
-└── docs/                             # Documentation
+├── scripts/                          # Development and build scripts
+│   ├── dev.sh                        # Start development servers
+│   ├── setup.sh                      # Initial project setup
+│   ├── backend.sh                    # Start backend only
+│   ├── frontend.sh                   # Start frontend only
+│   ├── build.sh                      # Production build
+│   ├── test.sh                       # Run all tests
+│   └── clean.sh                      # Clean build artifacts
+├── docker/                           # Docker configuration (future)
+├── docs/                             # Documentation
+├── voices/                           # TTS voice models (legacy location)
+├── venv/                             # Legacy virtual environment
+├── Makefile                          # Development commands
+├── .env                              # Environment variables
+├── .gitignore                        # Git ignore rules
+└── README.md                         # This file
 ```
 
 ## 🔧 Development
@@ -63,91 +92,126 @@ audio-book-app/
 - **Python 3.11+** with pip
 - **Node.js 18+** with npm
 - **Piper TTS binary** installed in PATH
-- **Docker** (for production builds)
+- **Docker** (optional, for production builds)
 
 ### Installation
 
-#### 1. Backend Setup
+The setup script handles everything automatically:
 
 ```bash
+# Automated setup
+make setup
+```
+
+**Manual setup** (if needed):
+
+```bash
+# Backend
 cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 
-# Install Piper TTS (if not already installed)
+# Frontend
+cd frontend
+npm install
+
+# Install Piper TTS
 wget https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz
 tar -xzf piper_amd64.tar.gz
 sudo mv piper /usr/local/bin/
 ```
 
-#### 2. Frontend Setup
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Install testing dependencies
-npm install --save-dev @testing-library/react @testing-library/jest-dom @testing-library/user-event
-npm install --save-dev @types/jest jest jest-environment-jsdom
-```
-
 ### Available Commands
 
-| Command           | Description                                    |
-| ----------------- | ---------------------------------------------- |
-| `make dev`        | Start development servers (backend + frontend) |
-| `make test`       | Run all tests (backend + frontend)             |
-| `make lint`       | Lint and format code                           |
-| `make type-check` | Run type checking                              |
-| `make build`      | Build for production                           |
-| `make deploy`     | Deploy to CapRover                             |
-| `make clean`      | Clean build artifacts                          |
+| Command         | Script                  | Description             |
+| --------------- | ----------------------- | ----------------------- |
+| `make setup`    | `./scripts/setup.sh`    | Initial project setup   |
+| `make dev`      | `./scripts/dev.sh`      | Start both servers      |
+| `make backend`  | `./scripts/backend.sh`  | Start backend only      |
+| `make frontend` | `./scripts/frontend.sh` | Start frontend only     |
+| `make test`     | `./scripts/test.sh`     | Run all tests           |
+| `make build`    | `./scripts/build.sh`    | Build for production    |
+| `make clean`    | `./scripts/clean.sh`    | Clean build artifacts   |
+| `make help`     | -                       | Show available commands |
 
-### Manual Development
+### Daily Development Workflow
 
-#### Backend (Port 8000)
+```bash
+# Start development
+make dev
+
+# Access applications
+# Backend API: http://localhost:8000
+# Frontend:    http://localhost:3000
+# API Docs:    http://localhost:8000/docs
+
+# Stop servers: Ctrl+C
+```
+
+## 🎯 Features
+
+### Current Features
+
+- ✅ PDF and EPUB text extraction
+- ✅ Text cleaning and preprocessing
+- ✅ High-quality neural TTS with Piper
+- ✅ Audio file generation (WAV format)
+- ✅ Command-line interface (`tts.py`)
+- ✅ Development environment setup
+
+### Planned Features (Web App)
+
+- 🔄 Web file upload interface
+- 🔄 Real-time conversion progress
+- 🔄 Audio player with controls
+- 🔄 Multiple voice models support
+- 🔄 Batch processing
+- 🔄 Audio format conversion (MP3, etc.)
+- 🔄 User settings and preferences
+
+## 🧪 Testing
+
+### Backend Tests
 
 ```bash
 cd backend
 source venv/bin/activate
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python -m pytest tests/ -v
+
+# With coverage
+python -m pytest tests/ --cov=app --cov-report=html
 ```
 
-#### Frontend (Port 3000)
+### Frontend Tests
 
 ```bash
 cd frontend
-NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+npm test
+
+# Watch mode
+npm test -- --watch
 ```
 
-## 🐳 Docker
-
-### Development
+### Integration Tests
 
 ```bash
-# Start with Docker Compose
-docker-compose -f docker/docker-compose.dev.yml up
+# Full application test
+make test
 ```
 
-### Production Build
+## 🐳 Docker (Production)
+
+### Build Production Image
 
 ```bash
-# Build production image
+# Build Docker image
 docker build -f docker/Dockerfile -t audio-book-app .
 
-# Run production container
+# Run container
 docker run -p 8000:8000 -v ./storage:/app/storage audio-book-app
 ```
-
-## 🚀 Deployment
 
 ### CapRover Deployment
 
@@ -167,17 +231,30 @@ docker run -p 8000:8000 -v ./storage:/app/storage audio-book-app
    ```
 
 3. **Deploy**
-
    ```bash
-   # Automated deployment
-   make deploy
-
-   # Or manual deployment
-   ./scripts/build.sh
+   make build
    caprover deploy --caproverUrl https://captain.your-domain.com \
                    --appName audio-book-app \
                    --tarFile build/audio-book-app.tar.gz
    ```
+
+## 📖 API Documentation
+
+- **Development**: http://localhost:8000/docs (Swagger UI)
+- **ReDoc**: http://localhost:8000/redoc
+- **OpenAPI JSON**: http://localhost:8000/openapi.json
+
+### Key Endpoints (Planned)
+
+| Method | Endpoint                       | Description              |
+| ------ | ------------------------------ | ------------------------ |
+| POST   | `/api/upload/file`             | Upload PDF/EPUB file     |
+| POST   | `/api/convert/start`           | Start TTS conversion     |
+| GET    | `/api/convert/status/{job_id}` | Get conversion status    |
+| GET    | `/api/audio/{job_id}`          | Download generated audio |
+| GET    | `/health`                      | Health check             |
+
+## 🔧 Configuration
 
 ### Environment Variables
 
@@ -190,14 +267,14 @@ APP_NAME="TTS Audio Book Converter"
 
 # TTS Configuration
 VOICE_MODEL=voices/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx
-LENGTH_SCALE=1.0
-NOISE_SCALE=0.667
-SENTENCE_SILENCE=0.35
-PAUSE_BETWEEN_BLOCKS=0.35
+LENGTH_SCALE=1.0              # Speech speed (0.9=faster, 1.1=slower)
+NOISE_SCALE=0.667             # Voice variation
+SENTENCE_SILENCE=0.35         # Pause between sentences
+PAUSE_BETWEEN_BLOCKS=0.35     # Pause between text blocks
 
 # File Processing
-MAX_FILE_SIZE=52428800  # 50MB
-MAX_CHUNK_CHARS=1500
+MAX_FILE_SIZE=52428800        # 50MB upload limit
+MAX_CHUNK_CHARS=1500          # Text chunk size for processing
 
 # Frontend
 NEXT_PUBLIC_API_URL=http://localhost:8000
@@ -207,51 +284,16 @@ CAPROVER_URL=https://captain.your-domain.com
 APP_NAME=audio-book-app
 ```
 
-## 📖 API Documentation
+### Voice Models
 
-- **Development**: http://localhost:8000/docs
-- **Production**: https://your-app.com/docs
+The application uses Piper TTS voice models. Default model:
 
-### Key Endpoints
+- **Language**: French (fr_FR)
+- **Voice**: Siwis (female voice)
+- **Quality**: Low (faster processing)
+- **Files**: `fr_FR-siwis-low.onnx` + `fr_FR-siwis-low.onnx.json`
 
-| Method | Endpoint                       | Description              |
-| ------ | ------------------------------ | ------------------------ |
-| POST   | `/api/upload/file`             | Upload PDF/EPUB file     |
-| POST   | `/api/convert/start`           | Start TTS conversion     |
-| GET    | `/api/convert/status/{job_id}` | Get conversion status    |
-| GET    | `/api/audio/{job_id}`          | Download generated audio |
-
-## 🧪 Testing
-
-### Backend Tests
-
-```bash
-cd backend
-python -m pytest tests/ -v
-
-# With coverage
-python -m pytest tests/ --cov=app --cov-report=html
-```
-
-### Frontend Tests
-
-```bash
-cd frontend
-npm test
-
-# Watch mode
-npm test -- --watch
-
-# Coverage
-npm test -- --coverage
-```
-
-### Integration Tests
-
-```bash
-# Full application test
-make test
-```
+Additional voice models can be downloaded from [Piper TTS releases](https://github.com/rhasspy/piper/releases/).
 
 ## 🔍 Troubleshooting
 
@@ -260,10 +302,10 @@ make test
 **1. Piper TTS not found**
 
 ```bash
-# Check if Piper is installed
+# Check installation
 which piper
 
-# If not found, install:
+# Install if missing
 wget https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz
 tar -xzf piper_amd64.tar.gz
 sudo mv piper /usr/local/bin/
@@ -272,100 +314,69 @@ sudo mv piper /usr/local/bin/
 **2. Voice model not found**
 
 ```bash
-# Ensure voice models are in the correct directory
+# Check voice models location
 ls -la backend/voices/fr/fr_FR/siwis/low/
 # Should contain: fr_FR-siwis-low.onnx and fr_FR-siwis-low.onnx.json
 ```
 
-**3. Frontend TypeScript errors**
+**3. Python virtual environment issues**
 
 ```bash
-# Install missing test dependencies
-cd frontend
-npm install --save-dev @testing-library/react @testing-library/jest-dom @types/jest
+# Recreate virtual environment
+cd backend
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-**4. Docker build fails**
+**4. Node.js dependency conflicts**
 
 ```bash
-# Clean Docker cache
-docker system prune -a
+# Clean npm cache
+cd frontend
+rm -rf node_modules package-lock.json
+npm install
+```
 
-# Rebuild
-docker build -f docker/Dockerfile -t audio-book-app . --no-cache
+**5. Port already in use**
+
+```bash
+# Kill processes on ports 8000/3000
+sudo lsof -t -i:8000 | xargs kill -9
+sudo lsof -t -i:3000 | xargs kill -9
 ```
 
 ### Performance Tips
 
 - **Large files**: Files > 10MB may take several minutes to process
-- **Concurrent conversions**: Limited by CPU cores (default: 2 simultaneous jobs)
-- **Storage cleanup**: Generated files are kept for 24h (configurable)
-
-## 🛠️ Development Workflow
-
-### Adding New Features
-
-1. **Backend changes**:
-
-   ```bash
-   cd backend
-   # Add service/route/model
-   # Add tests
-   python -m pytest tests/
-   ```
-
-2. **Frontend changes**:
-
-   ```bash
-   cd frontend
-   # Add component/hook/page
-   # Add tests
-   npm test
-   ```
-
-3. **Integration**:
-   ```bash
-   make dev  # Test locally
-   make build  # Test production build
-   ```
-
-### Code Quality
-
-```bash
-# Lint all code
-make lint
-
-# Type checking
-make type-check
-
-# Format code
-cd backend && ruff format .
-cd frontend && npm run format
-```
+- **Memory usage**: Text processing keeps full content in memory
+- **Storage**: Generated audio files are kept indefinitely (manual cleanup)
+- **Concurrent processing**: Limited by CPU cores
 
 ## 📊 Monitoring
-
-### Logs
-
-```bash
-# Backend logs
-tail -f backend/app.log
-
-# Docker logs
-docker logs -f audio-book-app
-```
 
 ### Health Checks
 
 - **Backend**: http://localhost:8000/health
-- **Frontend**: http://localhost:3000 (should load homepage)
+- **Frontend**: http://localhost:3000 (homepage load)
+
+### Logs
+
+```bash
+# Development logs (stdout)
+make dev
+
+# Production logs (if using Docker)
+docker logs audio-book-app
+```
 
 ## 🔒 Security
 
 ### File Upload Security
 
 - File type validation (PDF/EPUB only)
-- Size limits (50MB max)
+- File size limits (50MB max)
 - Sanitized file names
 - Isolated processing environment
 
@@ -373,28 +384,82 @@ docker logs -f audio-book-app
 
 - No debug mode in production
 - HTTPS enforced via CapRover
-- Environment variables for secrets
-- File cleanup after processing
+- Environment variables for configuration
+- No sensitive data in logs
 
-## 📝 Contributing
+## 🛠️ Development Workflow
 
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Make changes and add tests
-4. Run quality checks: `make lint && make test`
-5. Commit: `git commit -m 'feat: add amazing feature'`
-6. Push: `git push origin feature/amazing-feature`
-7. Create Pull Request
+### Adding New Features
 
-### Commit Convention
+1. **Backend changes** (Python):
 
-- `feat:` New features
-- `fix:` Bug fixes
-- `docs:` Documentation
-- `style:` Code style changes
-- `refactor:` Code refactoring
-- `test:` Adding tests
-- `chore:` Maintenance tasks
+   ```bash
+   cd backend
+   source venv/bin/activate
+   # Edit code in app/
+   # Add tests in tests/
+   python -m pytest tests/
+   ```
+
+2. **Frontend changes** (TypeScript):
+
+   ```bash
+   cd frontend
+   # Edit code in src/
+   npm run type-check
+   npm run lint
+   ```
+
+3. **Test integration**:
+   ```bash
+   make dev  # Test locally
+   make test # Run all tests
+   ```
+
+### Code Quality
+
+```bash
+# Lint and format
+cd backend && ruff check . && ruff format .
+cd frontend && npm run lint
+
+# Type checking
+cd backend && mypy app/
+cd frontend && npm run type-check
+```
+
+### Git Workflow
+
+```bash
+# Create feature branch
+git checkout -b feature/amazing-feature
+
+# Make changes and test
+make test
+
+# Commit with conventional format
+git commit -m "feat: add amazing feature"
+
+# Push and create PR
+git push origin feature/amazing-feature
+```
+
+## 📝 Migration Notes
+
+This project evolved from a standalone Python script (`tts.py`) to a full-stack web application:
+
+### Legacy Files
+
+- `tts.py` - Original command-line script (still functional)
+- `voices/` - Voice models (moved to `backend/voices/`)
+- `venv/` - Old virtual environment (moved to `backend/venv/`)
+
+### Current Architecture
+
+- **Monorepo structure** with separate backend/frontend
+- **FastAPI backend** with modular services
+- **Next.js frontend** with TypeScript
+- **Automated development** with scripts and Makefile
 
 ## 📄 License
 
@@ -409,10 +474,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/your-repo/audio-book-app/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-repo/audio-book-app/discussions)
-- **Documentation**: [Project Wiki](https://github.com/your-repo/audio-book-app/wiki)
+- **Issues**: [GitHub Issues](https://github.com/ThibaultG94/audio-book/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ThibaultG94/audio-book/discussions)
+- **Documentation**: [Project Wiki](https://github.com/ThibaultG94/audio-book/wiki)
 
 ---
 
-Made with ❤️ for converting books to audio
+Made with ❤️ for converting books to audio using AI
