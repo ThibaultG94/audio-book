@@ -1,4 +1,3 @@
-# backend/app/core/config.py - Fix voice model path
 """Application configuration with correct voice model paths."""
 
 from pathlib import Path

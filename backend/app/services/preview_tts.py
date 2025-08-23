@@ -1,4 +1,3 @@
-# backend/app/services/preview_tts.py - Fix with path validation
 """Lightweight TTS service for voice previews with path validation."""
 
 import subprocess
