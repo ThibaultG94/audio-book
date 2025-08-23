@@ -1,18 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Play, Pause, Volume2, Settings, Loader2, Download } from "lucide-react";
-
-interface Voice {
-  model_path: string;
-  name: string;
-  language?: {
-    name_english?: string;
-    code?: string;
-  };
-  quality?: string;
-  dataset?: string;
-}
+import { Play, Pause, Volume2, Settings, Loader2, Download, AlertCircle } from "lucide-react";
 
 interface VoicePreviewProps {
   onVoiceTest?: (voice: string, settings: VoiceSettings) => void;
@@ -24,6 +13,9 @@ interface VoiceSettings {
   noise_scale: number;
 }
 
+// Backend API base URL - ALWAYS point to port 8000
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 const DEFAULT_PREVIEW_TEXT = "Bonjour ! Ceci est un aperçu de la voix française pour la conversion de vos livres audio.";
 
 export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps) {
@@ -34,24 +26,12 @@ export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps)
   const [showSettings, setShowSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Voice settings
   const [settings, setSettings] = useState<VoiceSettings>({
     length_scale: 1.0,
     noise_scale: 0.667
   });
   
-  // Available voices (would be fetched from API)
-  const [availableVoices] = useState<Voice[]>([
-    {
-      model_path: "fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx",
-      name: "Siwis (French)",
-      language: { name_english: "French", code: "fr_FR" },
-      quality: "low",
-      dataset: "siwis"
-    }
-  ]);
-  
-  const [selectedVoice, setSelectedVoice] = useState(availableVoices[0]?.model_path || "");
+  const [selectedVoice, setSelectedVoice] = useState("fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx");
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -70,7 +50,12 @@ export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps)
     setError(null);
 
     try {
-      const response = await fetch("/api/preview/tts", {
+      // Construct FULL URL to backend (not Next.js API routes)
+      const previewUrl = `${API_BASE_URL}/api/preview/tts`;
+      
+      console.log("🎤 Calling preview API:", previewUrl);
+
+      const response = await fetch(previewUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -83,26 +68,69 @@ export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps)
         })
       });
 
+      console.log("📡 Response status:", response.status);
+
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || `HTTP ${response.status}`);
+        const contentType = response.headers.get("content-type");
+        
+        if (contentType && contentType.includes("text/html")) {
+          throw new Error("Route non trouvée - vérifiez que le backend FastAPI tourne sur le port 8000");
+        }
+        
+        let errorMessage = `Erreur HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          errorMessage = await response.text() || errorMessage;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      setCurrentAudioUrl(data.audio_url);
+      console.log("✅ Preview data:", data);
       
-      // Automatically play the preview
+      if (!data.audio_url) {
+        throw new Error("Réponse invalide - pas d'URL audio");
+      }
+      
+      // Construct full audio URL
+      const fullAudioUrl = `${API_BASE_URL}${data.audio_url}`;
+      console.log("🎵 Audio URL:", fullAudioUrl);
+      
+      setCurrentAudioUrl(fullAudioUrl);
+      
+      // Auto-play the preview
       if (audioRef.current) {
-        audioRef.current.src = data.audio_url;
-        await audioRef.current.play();
-        setIsPlaying(true);
+        audioRef.current.src = fullAudioUrl;
+        try {
+          await audioRef.current.play();
+          setIsPlaying(true);
+        } catch (playError) {
+          console.warn("Auto-play failed:", playError);
+        }
       }
 
       // Notify parent component
       onVoiceTest?.(selectedVoice, settings);
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Échec de la génération de l'aperçu");
+      console.error("❌ Preview generation error:", err);
+      
+      let errorMessage = "Erreur inconnue";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
+      // Provide specific error messages
+      if (errorMessage.includes("fetch") || errorMessage.includes("NetworkError")) {
+        errorMessage = `Backend non accessible. Vérifiez que FastAPI tourne sur ${API_BASE_URL}`;
+      } else if (errorMessage.includes("404")) {
+        errorMessage = "Route preview non trouvée. Vérifiez la configuration du backend FastAPI";
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -130,6 +158,7 @@ export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps)
 
   const resetPreviewText = () => {
     setPreviewText(DEFAULT_PREVIEW_TEXT);
+    setError(null);
   };
 
   const downloadPreview = () => {
@@ -159,21 +188,29 @@ export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps)
         </button>
       </div>
 
+      {/* API Status */}
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+        <div className="flex items-center text-sm">
+          <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+          <span className="text-blue-800">
+            Backend API: <code className="bg-blue-100 px-1 rounded font-mono">{API_BASE_URL}</code>
+          </span>
+        </div>
+      </div>
+
       {/* Voice Selection */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Voix disponibles
+          Voix disponible
         </label>
         <select
           value={selectedVoice}
           onChange={(e) => setSelectedVoice(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          {availableVoices.map((voice) => (
-            <option key={voice.model_path} value={voice.model_path}>
-              {voice.name} - {voice.quality} - {voice.language?.name_english}
-            </option>
-          ))}
+          <option value="fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx">
+            Siwis (French) - Low Quality
+          </option>
         </select>
       </div>
 
@@ -199,9 +236,9 @@ export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps)
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Plus lent</span>
-              <span>Normal</span>
-              <span>Plus rapide</span>
+              <span>0.5x</span>
+              <span>1.0x</span>
+              <span>2.0x</span>
             </div>
           </div>
           
@@ -222,8 +259,9 @@ export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps)
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Monotone</span>
-              <span>Naturelle</span>
+              <span>0.0</span>
+              <span>0.5</span>
+              <span>1.0</span>
             </div>
           </div>
         </div>
@@ -254,18 +292,27 @@ export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps)
           <span className="text-xs text-gray-500">
             {previewText.length}/500 caractères
           </span>
-          {previewText.length > 400 && (
-            <span className="text-xs text-amber-600">
-              Texte long - génération plus lente
-            </span>
-          )}
         </div>
       </div>
 
       {/* Error Display */}
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-800">{error}</p>
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-red-800 font-medium">Erreur</p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+              <div className="mt-2 text-xs text-red-600">
+                <p>💡 Vérifications :</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>Backend FastAPI tourne sur {API_BASE_URL}</li>
+                  <li>Test manuel: <a href={`${API_BASE_URL}/health`} className="underline" target="_blank">health check</a></li>
+                  <li>Routes preview bien configurées dans main.py</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -317,10 +364,9 @@ export function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps)
         className="hidden"
       />
 
-      {/* Info */}
+      {/* Debug Info */}
       <div className="mt-4 text-xs text-gray-500">
-        💡 Cet aperçu vous permet de tester la voix avant de convertir votre document complet.
-        La qualité sera identique pour votre livre audio.
+        💡 Appel direct vers FastAPI sur le port 8000 (contourne Next.js API routes)
       </div>
     </div>
   );
