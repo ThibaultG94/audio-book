@@ -1,6 +1,8 @@
-"""Lightweight TTS service for voice previews."""
+# backend/app/services/preview_tts.py - Fix with path validation
+"""Lightweight TTS service for voice previews with path validation."""
 
 import subprocess
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -22,7 +24,7 @@ class PreviewTTSEngine:
         noise_w: Optional[float] = None,
     ):
         """
-        Initialize Preview TTS engine.
+        Initialize Preview TTS engine with path validation.
         
         Args:
             voice_model: Path to voice model (.onnx file)
@@ -38,9 +40,67 @@ class PreviewTTSEngine:
         # For previews, use minimal sentence silence for faster generation
         self.sentence_silence = 0.1  # Shorter pause than full conversion
         
-        # Validate voice model exists
-        if not Path(self.voice_model).exists():
-            raise TTSError(f"Voice model not found: {self.voice_model}")
+        # Validate and resolve voice model path
+        self.voice_model_path = self._resolve_voice_model_path()
+    
+    def _resolve_voice_model_path(self) -> Path:
+        """
+        Resolve and validate voice model path.
+        
+        Returns:
+            Absolute path to voice model
+            
+        Raises:
+            TTSError: If voice model not found
+        """
+        # Try different path combinations
+        possible_paths = [
+            Path(self.voice_model),  # Direct path as given
+            Path("backend") / self.voice_model,  # With backend/ prefix
+            Path.cwd() / self.voice_model,  # From current working directory
+            Path.cwd() / "backend" / self.voice_model,  # From project root
+        ]
+        
+        print(f"🔍 Looking for voice model: {self.voice_model}")
+        print(f"📁 Current working directory: {Path.cwd()}")
+        
+        for path in possible_paths:
+            abs_path = path.resolve()
+            print(f"  Trying: {abs_path}")
+            if abs_path.exists():
+                print(f"✅ Found voice model at: {abs_path}")
+                return abs_path
+        
+        # If not found, try to find ANY .onnx file in voices directory
+        voices_dirs = [
+            Path("voices"),
+            Path("backend/voices"),
+            Path.cwd() / "voices",
+            Path.cwd() / "backend/voices"
+        ]
+        
+        for voices_dir in voices_dirs:
+            if voices_dir.exists():
+                print(f"📂 Scanning voices directory: {voices_dir}")
+                onnx_files = list(voices_dir.rglob("*.onnx"))
+                if onnx_files:
+                    print(f"🎤 Available voice models:")
+                    for onnx_file in onnx_files:
+                        print(f"  - {onnx_file}")
+                    
+                    # Use the first available model
+                    selected_model = onnx_files[0]
+                    print(f"⚡ Auto-selecting: {selected_model}")
+                    return selected_model
+        
+        # Generate detailed error message
+        error_msg = f"Voice model not found: {self.voice_model}\n"
+        error_msg += f"Current directory: {Path.cwd()}\n"
+        error_msg += "Searched paths:\n"
+        for path in possible_paths:
+            error_msg += f"  - {path.resolve()} (exists: {path.exists()})\n"
+        
+        raise TTSError(error_msg)
     
     def text_to_wav(self, text: str, output_path: Path) -> None:
         """
@@ -60,11 +120,14 @@ class PreviewTTSEngine:
         if not text.strip():
             raise TTSError("Empty text provided for preview")
         
+        # Ensure output directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
         try:
             # Build Piper command optimized for preview
             cmd = [
                 "piper",
-                "--model", self.voice_model,
+                "--model", str(self.voice_model_path),  # Use resolved absolute path
                 "--output_file", str(output_path),
                 "--length_scale", str(self.length_scale),
                 "--noise_scale", str(self.noise_scale),
@@ -76,6 +139,9 @@ class PreviewTTSEngine:
             clean_text = self._clean_preview_text(text)
             text_input = clean_text.strip() + "\n"
             
+            print(f"🎤 Generating preview with command: {' '.join(cmd)}")
+            print(f"📝 Input text: {clean_text[:50]}...")
+            
             # Execute Piper TTS
             result = subprocess.run(
                 cmd,
@@ -86,9 +152,15 @@ class PreviewTTSEngine:
                 timeout=30  # 30 second timeout for previews
             )
             
+            print(f"✅ Piper stdout: {result.stdout}")
+            if result.stderr:
+                print(f"⚠️  Piper stderr: {result.stderr}")
+            
             # Verify output file was created
             if not output_path.exists() or output_path.stat().st_size == 0:
                 raise TTSError("Preview audio generation failed - no output produced")
+            
+            print(f"🎵 Preview generated: {output_path} ({output_path.stat().st_size} bytes)")
                 
         except subprocess.TimeoutExpired:
             raise TTSError("Preview generation timed out (>30 seconds)")
@@ -147,61 +219,24 @@ class PreviewTTSEngine:
         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
             return False
     
-    @staticmethod 
-    def get_voice_info(model_path: str) -> dict:
+    @staticmethod
+    def find_voice_models() -> list[Path]:
         """
-        Get information about a voice model.
+        Find all available voice models in the system.
         
-        Args:
-            model_path: Path to voice model file
-            
         Returns:
-            Dictionary with voice model information
+            List of paths to .onnx voice model files
         """
-        import json
+        voice_models = []
+        search_dirs = [
+            Path("voices"),
+            Path("backend/voices"),
+            Path.cwd() / "voices",
+            Path.cwd() / "backend/voices"
+        ]
         
-        model_file = Path(model_path)
-        json_file = model_file.with_suffix(".onnx.json")
+        for search_dir in search_dirs:
+            if search_dir.exists():
+                voice_models.extend(search_dir.rglob("*.onnx"))
         
-        info = {
-            "name": model_file.stem,
-            "path": str(model_file),
-            "exists": model_file.exists()
-        }
-        
-        # Load metadata if available
-        if json_file.exists():
-            try:
-                with open(json_file, 'r', encoding='utf-8') as f:
-                    metadata = json.load(f)
-                
-                info.update({
-                    "language": metadata.get("language", {}),
-                    "dataset": metadata.get("dataset"),
-                    "quality": metadata.get("audio", {}).get("quality"),
-                    "sample_rate": metadata.get("audio", {}).get("sample_rate"),
-                    "num_speakers": metadata.get("num_speakers", 1)
-                })
-            except Exception:
-                pass  # Ignore metadata parsing errors
-        
-        return info
-    
-    def estimate_duration(self, text: str) -> float:
-        """
-        Estimate audio duration for given text.
-        
-        Args:
-            text: Text to estimate duration for
-            
-        Returns:
-            Estimated duration in seconds
-        """
-        # Rough estimation: ~150 words per minute for average speech
-        # Adjusted by length_scale
-        word_count = len(text.split())
-        base_duration = (word_count / 150) * 60  # Base duration in seconds
-        adjusted_duration = base_duration / self.length_scale
-        
-        # Add small buffer for sentence pauses
-        return max(1.0, adjusted_duration + 0.5)
+        return list(set(voice_models))  # Remove duplicates
