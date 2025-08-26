@@ -1,5 +1,5 @@
 #!/bin/bash
-# 🚀 Development script - Start backend + frontend
+# 🚀 Development script - Start backend + frontend (Enhanced Voice Edition)
 
 set -e
 
@@ -28,8 +28,17 @@ cleanup() {
 # Trap interrupt signals
 trap cleanup SIGINT SIGTERM
 
+# Quick voice system check
+echo -e "${BLUE}🎤 Voice system check...${NC}"
+VOICES_COUNT=$(find backend/voices -name "*.onnx" 2>/dev/null | wc -l || echo "0")
+if [ "$VOICES_COUNT" -gt 0 ]; then
+    echo -e "  ${GREEN}✅ Found $VOICES_COUNT voice models${NC}"
+else
+    echo -e "  ${YELLOW}⚠️  No voices found. Install with: ./scripts/install-voices.sh default${NC}"
+fi
+
 # Start Backend
-echo -e "${GREEN}🐍 Starting Python backend...${NC}"
+echo -e "\n${GREEN}🐍 Starting Python backend...${NC}"
 cd backend
 
 # Check if venv exists
@@ -50,13 +59,13 @@ if [ ! -f ".deps_installed" ]; then
     touch .deps_installed
 fi
 
-# Create storage directories
-mkdir -p storage/uploads storage/outputs
+# Create storage directories (including voice previews)
+mkdir -p storage/uploads storage/outputs storage/outputs/previews
 
 # Check if Piper is available
 if ! command -v piper &> /dev/null; then
     echo -e "${YELLOW}⚠️  Piper TTS not found in PATH${NC}"
-    echo -e "${YELLOW}   You may need to install it manually${NC}"
+    echo -e "${YELLOW}   Install with: ./scripts/install-voices.sh${NC}"
 fi
 
 # Start backend server
@@ -67,7 +76,7 @@ BACKEND_PID=$!
 cd ..
 
 # Start Frontend
-echo -e "${GREEN}⚛️  Starting Next.js frontend...${NC}"
+echo -e "\n${GREEN}⚛️  Starting Next.js frontend...${NC}"
 cd frontend
 
 # Install dependencies if needed
@@ -89,6 +98,9 @@ echo -e "${BLUE}📍 Services:${NC}"
 echo -e "   Backend API:  http://localhost:8000"
 echo -e "   Frontend:     http://localhost:3000"
 echo -e "   API Docs:     http://localhost:8000/docs"
+echo -e "\n${BLUE}🎤 Voice Features:${NC}"
+echo -e "   Voice Catalog: http://localhost:8000/api/preview/voices"
+echo -e "   Voice Preview: Try the voice selector on the frontend!"
 echo -e "\n${YELLOW}💡 Press Ctrl+C to stop all servers${NC}"
 
 # Wait for interrupt

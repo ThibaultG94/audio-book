@@ -1,0 +1,190 @@
+{
+    "version": "1.0.0",
+    "voices": {
+      "voices/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx": {
+        "name": "Siwis",
+        "display_name": "Marie (Siwis)",
+        "language": {
+          "code": "fr_FR",
+          "name_english": "French",
+          "name_native": "Français"
+        },
+        "speaker": {
+          "gender": "female",
+          "age_range": "adult", 
+          "voice_style": "neutral",
+          "accent": "standard"
+        },
+        "technical": {
+          "quality": "low",
+          "sample_rate": 16000,
+          "dataset": "siwis",
+          "file_size_mb": 15,
+          "processing_speed": "fast"
+        },
+        "recommended_usage": [
+          "audiobook", 
+          "news",
+          "educational"
+        ],
+        "description": "Voix féminine claire et naturelle, optimisée pour la lecture rapide",
+        "best_for": "Conversion rapide de longs textes, podcasts",
+        "avatar": "👩‍💼",
+        "color": "#3B82F6"
+      },
+      "voices/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx": {
+        "name": "Siwis", 
+        "display_name": "Marie+ (Siwis Medium)",
+        "language": {
+          "code": "fr_FR",
+          "name_english": "French", 
+          "name_native": "Français"
+        },
+        "speaker": {
+          "gender": "female",
+          "age_range": "adult",
+          "voice_style": "expressive", 
+          "accent": "standard"
+        },
+        "technical": {
+          "quality": "medium",
+          "sample_rate": 22050,
+          "dataset": "siwis", 
+          "file_size_mb": 45,
+          "processing_speed": "medium"
+        },
+        "recommended_usage": [
+          "audiobook",
+          "storytelling", 
+          "entertainment"
+        ],
+        "description": "Voix féminine expressive avec excellente qualité audio", 
+        "best_for": "Livres audio professionnels, narration d'histoires",
+        "avatar": "👩‍🎨",
+        "color": "#8B5CF6"
+      },
+      "voices/fr/fr_FR/upmc/medium/fr_FR-upmc-medium.onnx": {
+        "name": "UPMC", 
+        "display_name": "Jessica & Pierre (UPMC)",
+        "language": {
+          "code": "fr_FR",
+          "name_english": "French",
+          "name_native": "Français" 
+        },
+        "speaker": {
+          "gender": "multi", 
+          "age_range": "adult",
+          "voice_style": "neutral",
+          "accent": "standard",
+          "available_speakers": {
+            "jessica": {"gender": "female", "style": "professional"},
+            "pierre": {"gender": "male", "style": "warm"}
+          }
+        },
+        "technical": {
+          "quality": "medium",
+          "sample_rate": 22050, 
+          "dataset": "upmc",
+          "file_size_mb": 85,
+          "processing_speed": "medium"
+        },
+        "recommended_usage": [
+          "audiobook",
+          "educational", 
+          "dialogue"
+        ],
+        "description": "Modèle multi-locuteur avec voix féminine et masculine", 
+        "best_for": "Textes avec dialogue, formations, présentations",
+        "avatar": "👫", 
+        "color": "#10B981"
+      },
+      "voices/fr/fr_FR/tom/medium/fr_FR-tom-medium.onnx": {
+        "name": "Tom",
+        "display_name": "Thomas (Tom)",
+        "language": {
+          "code": "fr_FR", 
+          "name_english": "French",
+          "name_native": "Français"
+        },
+        "speaker": {
+          "gender": "male",
+          "age_range": "adult",
+          "voice_style": "warm", 
+          "accent": "standard"
+        },
+        "technical": {
+          "quality": "medium",
+          "sample_rate": 22050,
+          "dataset": "tom",
+          "file_size_mb": 52,
+          "processing_speed": "medium" 
+        },
+        "recommended_usage": [
+          "audiobook", 
+          "storytelling",
+          "news"
+        ],
+        "description": "Voix masculine chaleureuse et professionnelle",
+        "best_for": "Romans, biographies, actualités", 
+        "avatar": "👨‍💼",
+        "color": "#059669"
+      },
+      "voices/fr/fr_FR/bernard/high/fr_FR-bernard-high.onnx": {
+        "name": "Bernard",
+        "display_name": "Bernard (High Quality)", 
+        "language": {
+          "code": "fr_FR",
+          "name_english": "French", 
+          "name_native": "Français"
+        },
+        "speaker": {
+          "gender": "male",
+          "age_range": "senior",
+          "voice_style": "authoritative",
+          "accent": "standard"
+        }, 
+        "technical": {
+          "quality": "high",
+          "sample_rate": 22050,
+          "dataset": "bernard", 
+          "file_size_mb": 125,
+          "processing_speed": "slow"
+        },
+        "recommended_usage": [
+          "documentary", 
+          "educational",
+          "professional"
+        ],
+        "description": "Voix masculine mature et autoritaire, très haute qualité",
+        "best_for": "Documentaires, formation professionnelle, essais", 
+        "avatar": "👨‍🏫",
+        "color": "#DC2626"
+      }
+    },
+    "recommendations": {
+      "audiobook_fiction": ["fr_FR-siwis-medium", "fr_FR-tom-medium"],
+      "audiobook_non_fiction": ["fr_FR-bernard-high", "fr_FR-upmc-medium"], 
+      "news_reading": ["fr_FR-siwis-low", "fr_FR-tom-medium"],
+      "storytelling": ["fr_FR-siwis-medium", "fr_FR-upmc-medium"],
+      "educational": ["fr_FR-bernard-high", "fr_FR-upmc-medium"],
+      "fastest_processing": ["fr_FR-siwis-low"],
+      "highest_quality": ["fr_FR-bernard-high", "fr_FR-siwis-medium"]
+    },
+    "filters": {
+      "by_gender": {
+        "female": ["fr_FR-siwis-low", "fr_FR-siwis-medium"],
+        "male": ["fr_FR-tom-medium", "fr_FR-bernard-high"], 
+        "multi": ["fr_FR-upmc-medium"]
+      },
+      "by_quality": {
+        "low": ["fr_FR-siwis-low"],
+        "medium": ["fr_FR-siwis-medium", "fr_FR-upmc-medium", "fr_FR-tom-medium"],
+        "high": ["fr_FR-bernard-high"] 
+      },
+      "by_speed": {
+        "fast": ["fr_FR-siwis-low"],
+        "medium": ["fr_FR-siwis-medium", "fr_FR-tom-medium", "fr_FR-upmc-medium"],
+        "slow": ["fr_FR-bernard-high"]
+      }
+    }
+  }
