@@ -1,27 +1,16 @@
 # Audio Book Converter
 
-Convert PDF and EPUB documents to high-quality audio books using AI-powered text-to-speech technology with Piper TTS.
+Convert PDF and EPUB documents to high-quality audiobooks using AI-powered text-to-speech technology with Piper TTS.
 
 ## 🚀 Quick Start
-
-### Prerequisites
-
-- **Python 3.11+** with pip
-- **Node.js 18+** with npm
-- **Piper TTS binary** installed in PATH
 
 ### One-time Setup
 
 ```bash
 # Clone and setup the project
 git clone <repo-url>
-cd audio-book
-
-# Complete automated setup (creates venv, installs dependencies, voices)
+cd audio-book-converter
 make setup
-
-# Or manual setup
-./scripts/setup.sh
 ```
 
 ### Development
@@ -35,187 +24,212 @@ make backend    # Python FastAPI server (port 8000)
 make frontend   # Next.js app (port 3000)
 ```
 
-### Voice Installation
+### Production Deployment
 
 ```bash
-# Install balanced voice set (recommended)
-./scripts/install-voices.sh default
-
-# Install high-quality voices
-./scripts/install-voices.sh premium
-
-# Install single voice (fastest)
-./scripts/install-voices.sh minimal
+# Build and deploy to CapRover
+make build
+make deploy
 ```
 
 ## 🏗️ Architecture
 
-- **Backend**: Python FastAPI with advanced voice management system
-- **Frontend**: Next.js 15 with TypeScript, TailwindCSS, and comprehensive voice selection UI
-- **TTS Engine**: Piper (offline neural text-to-speech) with multiple voice support
-- **Voice System**: Advanced voice metadata management, filtering, and recommendations
-- **Testing**: Complete test suite with unit, integration, and API tests
+- **Backend**: Python FastAPI with Piper TTS engine
+- **Frontend**: Next.js 15 with TypeScript and TailwindCSS
 - **Deployment**: Docker multi-stage build + CapRover
+- **Storage**: Local file system (uploads + generated audio)
+- **TTS Engine**: Piper (offline neural text-to-speech)
 
 ## 📁 Project Structure
 
 ```
-audio-book/
+audio-book-converter/
 ├── backend/                          # Python FastAPI backend
 │   ├── app/
 │   │   ├── main.py                   # FastAPI application entry point
 │   │   ├── api/routes/               # API endpoints (upload, convert, audio, preview)
-│   │   ├── services/                 # Business logic (TTS, voice management, processing)
+│   │   ├── services/                 # Business logic (TTS, text processing, voice management)
 │   │   ├── models/                   # Pydantic schemas and enums
-│   │   └── core/                     # Configuration, exceptions, startup validation
-│   ├── tests/                        # Complete test suite (unit + integration)
-│   ├── voices/                       # TTS voice models with metadata system
-│   └── storage/                      # File storage (uploads + outputs + previews)
-├── frontend/                         # Next.js 15 TypeScript frontend
+│   │   └── core/                     # Configuration and exceptions
+│   ├── tests/                        # Backend tests (unit + integration)
+│   ├── voices/                       # TTS voice models (.onnx files)
+│   ├── storage/                      # File storage (uploads + outputs)
+│   └── requirements.txt              # Python dependencies
+├── frontend/                         # Next.js frontend
 │   ├── src/
-│   │   ├── app/                      # Next.js App Router pages
-│   │   ├── components/               # React components (FileUpload, VoiceSelector, etc.)
-│   │   └── lib/                      # API client and utilities
+│   │   ├── app/                      # Next.js App Router
+│   │   ├── components/               # React components (upload, voice preview, audio player)
+│   │   ├── lib/                      # API client and utilities
+│   │   └── hooks/                    # Custom React hooks
+│   ├── public/                       # Static assets
 │   └── package.json                  # Node.js dependencies
-├── scripts/                          # Development and deployment automation
-│   ├── setup.sh                      # Complete project setup
-│   ├── dev.sh                        # Start development servers
-│   ├── install-voices.sh             # Automated voice installation
-│   └── diagnosis.sh                  # System diagnostic and troubleshooting
-├── docs/                             # Documentation
-│   └── structure.md                  # Complete project structure reference
-├── Makefile                          # Development commands
+├── scripts/                          # Development and deployment scripts
+├── docs/                             # Project documentation
 └── README.md                         # This file
 ```
 
-## 🎯 Features
+For detailed project structure, see [docs/structure.md](docs/structure.md).
 
-### Current Features
+## ✨ Features
 
-- ✅ **Advanced Voice Management**: Multiple voice models with metadata, filtering, and recommendations
-- ✅ **Interactive Voice Preview**: Test voices with custom parameters before conversion
-- ✅ **Intelligent Voice Selection**: Gender, quality, and usage-based filtering
-- ✅ **PDF and EPUB text extraction** with enhanced French text preprocessing
-- ✅ **High-quality neural TTS** with Piper and customizable parameters
-- ✅ **Real-time conversion progress** with status polling
-- ✅ **Comprehensive voice validation** and diagnostic tools
-- ✅ **Automated voice installation** system
-- ✅ **Complete test coverage** (unit + integration + API tests)
+### Core Functionality
 
-### Voice System Features
+- **File Upload**: Drag & drop PDF/EPUB files with validation
+- **Text Extraction**: Automatic content extraction from documents
+- **Voice Selection**: Multiple TTS voices with quality levels
+- **Voice Preview**: Test voices with custom text and parameters
+- **Audio Generation**: High-quality speech synthesis
+- **Real-time Progress**: Live conversion status updates
+- **Audio Download**: Stream generated audiobook files
 
-- 🎤 **Multi-Voice Support**: Female, male, and multi-speaker voices
-- 🔧 **Advanced Parameters**: Speed, expressivity, pitch stability, sentence pauses
-- 📊 **Voice Recommendations**: Usage-based suggestions (audiobook, news, storytelling)
-- 🎛️ **Interactive Preview**: Test voices with custom text and parameters
-- 📈 **Voice Analytics**: Statistics, validation, and performance metrics
-- 🚀 **Easy Installation**: Automated download and setup of voice models
+### Voice Management
 
-## 🔧 Available Commands
+- **Multi-language Support**: French, English, and more
+- **Quality Levels**: Low (fast), Medium, High (best quality)
+- **Voice Metadata**: Technical specs, usage recommendations
+- **Preview System**: Test voices before full conversion
+- **Parameter Tuning**: Speed, expressiveness, pauses
 
-| Command         | Description             |
-| --------------- | ----------------------- |
-| `make setup`    | Initial project setup   |
-| `make dev`      | Start both servers      |
-| `make backend`  | Start backend only      |
-| `make frontend` | Start frontend only     |
-| `make test`     | Run all tests           |
-| `make build`    | Build for production    |
-| `make clean`    | Clean build artifacts   |
-| `make help`     | Show available commands |
+### Developer Experience
 
-## 🎤 Voice Management
+- **Hot Reload**: Automatic code refresh in development
+- **Type Safety**: Full TypeScript integration
+- **Error Handling**: Comprehensive error messages
+- **Testing**: Unit, integration, and E2E tests
+- **Documentation**: API docs with Swagger/OpenAPI
 
-### Available Voice Models
+## 🔧 Configuration
 
-- **Siwis** (Female): Low/Medium/High quality French voices
-- **Tom** (Male): Warm and professional male voice
-- **Bernard** (Male): Mature, authoritative voice for documentaries
-- **UPMC** (Multi): Dual-speaker system (Jessica ♀ + Pierre ♂)
+### Environment Variables
 
-### Voice Installation Presets
+#### Backend (.env)
 
 ```bash
-# Balanced set (3 voices, ~180MB) - Recommended
-./scripts/install-voices.sh default
+DEBUG=true
+APP_NAME="Audio Book Converter"
 
-# High quality (4 voices, ~340MB) - Premium experience
-./scripts/install-voices.sh premium
+# TTS Configuration
+DEFAULT_VOICE_MODEL=fr_FR-siwis-low
+PIPER_EXECUTABLE=piper
+MAX_FILE_SIZE=52428800  # 50MB
 
-# Single voice (~45MB) - Fastest setup
-./scripts/install-voices.sh minimal
-
-# All voices (~440MB) - Complete collection
-./scripts/install-voices.sh all
+# Server
+HOST=0.0.0.0
+PORT=8000
+ALLOWED_ORIGINS=["http://localhost:3000"]
 ```
 
-### Voice System Commands
+#### Frontend (.env.local)
 
 ```bash
-# List available voices
-./scripts/install-voices.sh --list
-
-# Test installed voices
-./scripts/install-voices.sh --test
-
-# System diagnostic
-./scripts/diagnosis.sh
-
-# Voice structure validation
-./scripts/voices.sh
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-## 🔍 Development
+### TTS Voice Configuration
 
-### Daily Workflow
+The application uses Piper TTS voice models with the following structure:
 
-```bash
-# Start development environment
-make dev
-
-# Access applications
-# - Backend API: http://localhost:8000
-# - Frontend: http://localhost:3000
-# - API Documentation: http://localhost:8000/docs
-# - Voice Preview API: http://localhost:8000/api/preview/voices
-
-# Stop: Ctrl+C
+```
+backend/voices/
+└── {language}/
+    └── {locale}/
+        └── {dataset}/
+            └── {quality}/
+                ├── {model}.onnx      # Neural network model
+                └── {model}.onnx.json # Voice metadata
 ```
 
-### Testing
+Default voice: French (fr_FR-siwis-low) - female voice, good for audiobooks.
+
+## 🛠️ Development
+
+### Available Commands
 
 ```bash
+# Development
+make setup      # Initial project setup
+make dev        # Start development servers
+make backend    # Backend only (FastAPI)
+make frontend   # Frontend only (Next.js)
+
+# Testing & Quality
+make test       # Run all tests
+make lint       # Code linting and formatting
+make clean      # Clean build artifacts
+
+# Production
+make build      # Build Docker image
+make deploy     # Deploy to CapRover
+```
+
+### Adding New Voices
+
+1. Download voice models from [Piper releases](https://github.com/rhasspy/piper/releases)
+2. Place in `backend/voices/{language}/{locale}/{dataset}/{quality}/`
+3. Restart backend to auto-detect new voices
+
+```bash
+# Download additional voices
+./scripts/download-voices.sh
+```
+
+### API Development
+
+The backend exposes a RESTful API documented at `http://localhost:8000/docs` when running in development mode.
+
+Key endpoints:
+
+- `GET /api/preview/voices` - List available TTS voices
+- `POST /api/preview/tts` - Generate voice preview
+- `POST /api/upload/file` - Upload PDF/EPUB
+- `POST /api/convert/start` - Start conversion job
+- `GET /api/convert/status/{job_id}` - Get conversion progress
+- `GET /api/audio/{job_id}` - Download generated audio
+
+## 🧪 Testing
+
+### Running Tests
+
+```bash
+# Backend tests (pytest)
+cd backend
+source venv/bin/activate
+pytest tests/ -v --cov=app
+
+# Frontend tests (Jest)
+cd frontend
+npm test -- --coverage
+
 # Run all tests
 make test
-
-# Backend tests only
-cd backend && python -m pytest tests/ -v
-
-# Frontend tests only
-cd frontend && npm test
-
-# Integration tests
-python -m pytest tests/integration/ -v
 ```
 
-### Voice Development
+### Test Structure
+
+- **Unit Tests**: Individual functions and components
+- **Integration Tests**: API endpoints and workflows
+- **E2E Tests**: Complete user workflows (optional)
+
+Coverage targets: >80% for critical paths, >60% overall.
+
+## 📦 Deployment
+
+### Local Development
 
 ```bash
-# Voice system validation
-curl http://localhost:8000/api/preview/voices
+# Requirements
+- Python 3.11+
+- Node.js 18+
+- Piper TTS binary
 
-# Test voice parameters
-curl http://localhost:8000/api/preview/parameters/defaults
-
-# Voice installation guide
-curl http://localhost:8000/api/preview/voices/install-guide
+# Setup
+make setup  # Installs everything automatically
+make dev    # Start development environment
 ```
 
-## 🐳 Production Deployment
+### Production (CapRover)
 
-### CapRover Deployment
-
-1. **Build production image**:
+1. **Build the application**:
 
    ```bash
    make build
@@ -224,92 +238,129 @@ curl http://localhost:8000/api/preview/voices/install-guide
 2. **Deploy to CapRover**:
 
    ```bash
-   # Configure environment variables in CapRover dashboard
-   caprover deploy --caproverUrl https://captain.your-domain.com \
-                   --appName audio-book-app
+   export CAPROVER_URL=https://captain.your-domain.com
+   export APP_NAME=audio-book-converter
+   make deploy
    ```
 
-3. **Environment Variables**:
-   ```bash
-   DEBUG=false
-   VOICE_MODEL=voices/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx
-   LENGTH_SCALE=1.0
-   NOISE_SCALE=0.667
-   MAX_FILE_SIZE=52428800
-   ```
+3. **Configure environment variables** in CapRover dashboard:
+   - `DEBUG=false`
+   - `DEFAULT_VOICE_MODEL=fr_FR-siwis-low`
+   - `MAX_FILE_SIZE=52428800`
 
-## 🔒 Security Features
+### Docker
 
-- File type validation (PDF/EPUB only)
-- File size limits (50MB max)
-- Sanitized file names with UUID-based storage
-- Path traversal protection
-- Environment-based configuration (no secrets in code)
+```bash
+# Build production image
+docker build -t audio-book-converter .
 
-## 📊 API Documentation
+# Run container
+docker run -p 8000:8000 -v ./storage:/app/storage audio-book-converter
+```
 
-### Key Endpoints
+The Dockerfile uses multi-stage builds for optimization and includes both backend and frontend in a single container.
 
-| Method | Endpoint                           | Description              |
-| ------ | ---------------------------------- | ------------------------ |
-| POST   | `/api/upload/file`                 | Upload PDF/EPUB file     |
-| POST   | `/api/convert/start`               | Start TTS conversion     |
-| GET    | `/api/convert/status/{job_id}`     | Get conversion status    |
-| GET    | `/api/audio/{job_id}`              | Download generated audio |
-| GET    | `/api/preview/voices`              | List available voices    |
-| POST   | `/api/preview/tts`                 | Generate voice preview   |
-| GET    | `/api/preview/parameters/defaults` | Get TTS parameters       |
-
-### Voice API Endpoints
-
-- **Voice Management**: `/api/preview/voices` - Complete voice catalog with metadata
-- **Voice Preview**: `/api/preview/tts` - Generate audio previews with custom parameters
-- **Voice Validation**: `/api/preview/voices/validate` - Validate installed voices
-- **Installation Guide**: `/api/preview/voices/install-guide` - Voice installation instructions
-
-## 🧪 Quality Assurance
-
-### Test Coverage
-
-- **Unit Tests**: Services, utilities, and core components
-- **Integration Tests**: Complete API workflows
-- **Voice System Tests**: Voice management, validation, and preview generation
-- **API Tests**: All endpoints with error handling
-
-### Code Quality
-
-- **Python**: PEP8, ruff formatting, mypy type checking
-- **TypeScript**: ESLint, Prettier, strict TypeScript
-- **Git Hooks**: Pre-commit linting and testing
-
-## 🔧 Troubleshooting
+## 🔍 Troubleshooting
 
 ### Common Issues
 
-1. **Piper TTS not found**: Install with `./scripts/install-voices.sh`
-2. **No voices available**: Run `./scripts/diagnosis.sh` for system check
-3. **Backend connection error**: Verify FastAPI is running on port 8000
-4. **Voice preview fails**: Check voice model paths and Piper installation
+**Backend not accessible**
 
-### Diagnostic Tools
+- Check if port 8000 is available: `lsof -i :8000`
+- Verify Piper TTS installation: `which piper`
+- Check environment variables in `.env`
+
+**Voices not loading**
+
+- Ensure voice files are in `backend/voices/`
+- Verify file permissions: `ls -la backend/voices/`
+- Check logs for voice scanning errors
+
+**Frontend build errors**
+
+- Verify Node.js version: `node --version` (need 18+)
+- Clear cache: `rm -rf frontend/.next frontend/node_modules`
+- Reinstall: `cd frontend && npm install`
+
+**CORS errors**
+
+- Check `ALLOWED_ORIGINS` in backend `.env`
+- Verify frontend URL matches allowed origins
+
+### Debug Mode
+
+Enable detailed logging:
 
 ```bash
-# Complete system diagnostic
-./scripts/diagnosis.sh
+# Backend debug mode
+cd backend
+DEBUG=true python -m uvicorn app.main:app --reload --log-level debug
 
-# Voice system specific check
-./scripts/voices.sh
+# Frontend debug mode
+cd frontend
+npm run dev -- --inspect
+```
 
-# Backend health check
+### Health Checks
+
+```bash
+# Check backend health
 curl http://localhost:8000/health
 
-# Voice validation
-curl http://localhost:8000/api/preview/voices/validate
+# Check available voices
+curl http://localhost:8000/api/preview/voices
 ```
+
+## 🤝 Contributing
+
+### Development Workflow
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Make changes and test**: `make test`
+4. **Commit with conventional format**: `git commit -m "feat: add amazing feature"`
+5. **Push and create PR**: `git push origin feature/amazing-feature`
+
+### Code Standards
+
+- **Python**: PEP8, Black formatting, mypy type checking, pytest testing
+- **TypeScript**: ESLint, Prettier, strict mode, Jest testing
+- **Commits**: Conventional Commits format
+- **Documentation**: Update README and API docs for changes
+
+### Architecture Decisions
+
+For major changes, create an Architecture Decision Record (ADR) in `docs/decisions/`.
+
+## 📈 Roadmap
+
+### Current Version (v1.0)
+
+- ✅ Basic PDF/EPUB to audio conversion
+- ✅ Voice preview system
+- ✅ Multiple voice models
+- ✅ Real-time progress tracking
+- ✅ Web interface
+
+### Planned Features (v2.0)
+
+- 🔜 User authentication and accounts
+- 🔜 Conversion history and library
+- 🔜 Advanced audio processing (chapters, bookmarks)
+- 🔜 Batch processing
+- 🔜 Cloud voice models
+- 🔜 Mobile responsive improvements
+
+### Future Considerations
+
+- Multi-tenant architecture
+- Background job queuing (Redis/Celery)
+- CDN integration for audio delivery
+- Advanced AI features (summarization, etc.)
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -318,6 +369,12 @@ This project is licensed under the MIT License.
 - [Next.js](https://nextjs.org/) - React framework for production
 - [CapRover](https://caprover.com/) - Free and open source PaaS
 
+## 📞 Support
+
+- **Documentation**: [Project Wiki](https://github.com/your-username/audio-book-converter/wiki)
+- **Issues**: [GitHub Issues](https://github.com/your-username/audio-book-converter/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-username/audio-book-converter/discussions)
+
 ---
 
-**Made with ❤️ for converting books to audio using AI**
+Made with ❤️ for converting books to audio using AI

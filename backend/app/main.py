@@ -1,112 +1,116 @@
-"""FastAPI application entry point with preview route included."""
+"""FastAPI application entry point."""
+
+import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from app.core.config import settings
-# Import ALL routes including preview ⚠️ This was missing!
-from app.api.routes import upload, convert, audio, preview
+from app.core.config import get_settings
+from app.api.routes import upload, convert, audio, preview  # Add preview
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan management."""
+    settings = get_settings()
+    
+    # Create necessary directories
+    for directory in [settings.UPLOAD_DIR, settings.OUTPUT_DIR, settings.TEMP_DIR]:
+        directory.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Ensured directory exists: {directory}")
+    
+    # Verify Piper installation
+    try:
+        from app.services.tts_engine import TTSEngine
+        tts_engine = TTSEngine()
+        logger.info("TTS Engine initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize TTS Engine: {e}")
+        logger.warning("Application will start but TTS features may not work")
+    
+    # Verify voices directory
+    if not settings.VOICES_BASE_PATH.exists():
+        logger.warning(f"Voices directory not found: {settings.VOICES_BASE_PATH}")
+        logger.warning("Please download voice models for TTS functionality")
+    else:
+        # Count available voices
+        voice_files = list(settings.VOICES_BASE_PATH.rglob("*.onnx"))
+        logger.info(f"Found {len(voice_files)} voice model files")
+    
+    yield
+    
+    # Cleanup on shutdown
+    logger.info("Application shutting down")
 
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
+    settings = get_settings()
     
     app = FastAPI(
-        title=settings.app_name,
-        description="Convert PDF and EPUB to audio books with AI voice preview",
-        version="1.0.0",
-        debug=settings.debug,
+        title=settings.APP_NAME,
+        version=settings.VERSION,
+        description="Convert PDF and EPUB documents to high-quality audiobooks using AI TTS",
+        lifespan=lifespan
     )
     
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "*" if settings.debug else "https://yourdomain.com"
-        ],
+        allow_origins=settings.ALLOWED_ORIGINS,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+        allow_methods=["*"],
         allow_headers=["*"],
     )
     
-    # Include ALL routes - ⚠️ PREVIEW WAS MISSING HERE!
-    app.include_router(upload.router, prefix="/api/upload", tags=["file-upload"])
-    app.include_router(convert.router, prefix="/api/convert", tags=["conversion"]) 
-    app.include_router(audio.router, prefix="/api/audio", tags=["audio"])
-    app.include_router(preview.router, prefix="/api/preview", tags=["preview"])  # ⚠️ ADD THIS LINE!
+    # Include API routes
+    app.include_router(preview.router)  # Add preview routes
+    app.include_router(upload.router)
+    app.include_router(convert.router)
+    app.include_router(audio.router)
+    
+    # Serve static files (for audio downloads)
+    if settings.OUTPUT_DIR.exists():
+        app.mount("/static", StaticFiles(directory=str(settings.OUTPUT_DIR)), name="static")
     
     @app.get("/")
     async def root():
+        """Root endpoint."""
         return {
-            "message": "TTS Audio Book Converter API",
-            "version": "1.0.0",
-            "features": ["upload", "convert", "audio", "preview"],
-            "available_routes": [
-                "/api/upload/file",
-                "/api/convert/start",
-                "/api/convert/status/{job_id}",
-                "/api/audio/{job_id}",
-                "/api/preview/tts",  # ⚠️ THIS SHOULD BE LISTED
-                "/api/preview/voices",
-                "/api/preview/audio/{preview_id}"
-            ]
+            "message": "Audio Book Converter API",
+            "version": settings.VERSION,
+            "docs": "/docs"
         }
     
     @app.get("/health")
     async def health_check():
-        """Health check with route verification."""
-        # Get all registered routes
-        routes = []
-        for route in app.routes:
-            if hasattr(route, 'path') and hasattr(route, 'methods'):
-                for method in route.methods:
-                    if method != 'HEAD':  # Skip HEAD methods
-                        routes.append(f"{method} {route.path}")
-        
+        """Health check endpoint."""
         return {
             "status": "healthy",
-            "message": "Audio Book Converter API is running",
-            "routes": sorted(routes),  # ⚠️ This will show if preview routes are registered
-            "preview_available": "/api/preview/tts" in [route.path for route in app.routes if hasattr(route, 'path')]
+            "version": settings.VERSION,
+            "voices_available": settings.VOICES_BASE_PATH.exists()
         }
-    
-    # Debug endpoint to list all routes
-    @app.get("/debug/routes")
-    async def debug_routes():
-        """Debug endpoint to see all registered routes."""
-        routes = []
-        for route in app.routes:
-            if hasattr(route, 'path') and hasattr(route, 'methods'):
-                routes.append({
-                    "path": route.path,
-                    "methods": list(route.methods),
-                    "name": getattr(route, 'name', 'unnamed')
-                })
-        return {"routes": routes}
     
     return app
 
 
-# Create the FastAPI app instance
+# Create app instance
 app = create_app()
 
-# Development server entry point
 if __name__ == "__main__":
     import uvicorn
     
-    print("🔥 Starting development server...")
-    print("📍 Available endpoints:")
-    print("  • http://localhost:8000 - API info")
-    print("  • http://localhost:8000/health - Health check")
-    print("  • http://localhost:8000/docs - API documentation")
-    print("  • http://localhost:8000/debug/routes - All routes")
-    print("  • http://localhost:8000/api/preview/tts - Preview TTS")
-    
+    settings = get_settings()
     uvicorn.run(
         "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.debug
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.DEBUG,
+        log_level="debug" if settings.DEBUG else "info"
     )
