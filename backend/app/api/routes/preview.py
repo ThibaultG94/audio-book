@@ -522,3 +522,149 @@ async def cleanup_old_previews(max_age_hours: int = 24):
         "size_freed_mb": round(total_size_deleted / (1024 * 1024), 2),
         "message": f"Cleaned up {deleted_count} preview files older than {max_age_hours}h"
     }
+
+async def get_voice_model_info(model_path: Path) -> VoiceModelInfo:
+    """
+    Extract detailed information about a voice model with guaranteed fields.
+    
+    Args:
+        model_path: Path to .onnx voice model file
+        
+    Returns:
+        Detailed voice model information with all required fields
+    """
+    voice_info = VoiceModelInfo(
+        model_path=str(model_path.relative_to(settings.voices_dir)) if settings.voices_dir in model_path.parents else str(model_path),
+        name=model_path.stem,
+        full_path=str(model_path),
+        file_size_mb=round(model_path.stat().st_size / (1024 * 1024), 2) if model_path.exists() else None
+    )
+    
+    # Try to load metadata from .json file
+    json_file = model_path.with_suffix(".onnx.json")
+    if json_file.exists():
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+            
+            voice_info.language = metadata.get("language", {})
+            voice_info.dataset = metadata.get("dataset", "unknown")
+            voice_info.quality = metadata.get("audio", {}).get("quality", "unknown")
+            voice_info.sample_rate = metadata.get("audio", {}).get("sample_rate", 22050)
+            
+        except Exception as e:
+            print(f"Warning: Could not parse metadata for {model_path}: {e}")
+    
+    return voice_info
+
+# Updated list_enhanced_voices function to ensure recommended_usage is always present
+@router.get("/voices", response_model=VoicesListResponse)
+async def list_enhanced_voices():
+    """
+    List all available voice models with detailed metadata.
+    Ensures all voices have recommended_usage array (never null/undefined).
+    
+    Returns:
+        Comprehensive list of voices with recommendations
+    """
+    voices_dir = settings.voices_dir
+    available_voices = []
+    
+    if voices_dir.exists():
+        # Scan for .onnx model files
+        for model_file in voices_dir.rglob("*.onnx"):
+            try:
+                voice_info = await get_voice_model_info(model_file)
+                
+                # CRITICAL FIX: Ensure recommended_usage is always a non-empty array
+                if not hasattr(voice_info, 'recommended_usage') or not voice_info.recommended_usage:
+                    # Infer usage based on voice characteristics
+                    voice_info.recommended_usage = _infer_recommended_usage(voice_info)
+                
+                available_voices.append(voice_info)
+                
+            except Exception as e:
+                print(f"Warning: Failed to process voice model {model_file}: {e}")
+                continue
+    
+    # Sort by quality and language
+    available_voices.sort(key=lambda v: (
+        v.language.get("name_english", "zzz") if v.language else "zzz",
+        v.quality or "medium",
+        v.name
+    ))
+    
+    # Generate recommendations based on use cases
+    recommendations = {
+        "fastest": _find_best_voice(available_voices, "speed"),
+        "highest_quality": _find_best_voice(available_voices, "quality"),
+        "most_natural": _find_best_voice(available_voices, "natural"),
+        "french_best": _find_best_voice(available_voices, "french")
+    }
+    
+    return VoicesListResponse(
+        voices=available_voices,
+        default_voice=settings.voice_model,
+        count=len(available_voices),
+        recommendations=recommendations
+    )
+
+def _infer_recommended_usage(voice_info) -> List[str]:
+    """
+    Infer recommended usage based on voice characteristics.
+    This ensures no voice ever has empty/null recommended_usage.
+    
+    Args:
+        voice_info: Voice model information
+        
+    Returns:
+        List of recommended usage types (never empty)
+    """
+    usage_list = []
+    
+    # Base usage - every voice can do these
+    usage_list.extend(["audiobook", "news"])
+    
+    # Quality-based recommendations
+    if hasattr(voice_info, 'quality'):
+        if voice_info.quality == "high":
+            usage_list.extend(["documentary", "professional"])
+        elif voice_info.quality == "low":
+            usage_list.append("educational")  # Fast for educational content
+    
+    # Dataset-based recommendations  
+    if hasattr(voice_info, 'dataset'):
+        dataset = voice_info.dataset.lower()
+        if "siwis" in dataset:
+            usage_list.append("storytelling")
+        elif "tom" in dataset:
+            usage_list.extend(["storytelling", "entertainment"])
+        elif "upmc" in dataset:
+            usage_list.extend(["educational", "dialogue"])
+        elif "bernard" in dataset:
+            usage_list.extend(["documentary", "professional"])
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_usage = []
+    for usage in usage_list:
+        if usage not in seen:
+            seen.add(usage)
+            unique_usage.append(usage)
+    
+    # Fallback: if somehow still empty, provide defaults
+    return unique_usage if unique_usage else ["audiobook", "news"]
+
+
+# Enhanced VoiceModelInfo class to include recommended_usage
+class VoiceModelInfo(BaseModel):
+    """Voice model information with guaranteed recommended_usage."""
+    model_path: str
+    name: str
+    full_path: str
+    language: Optional[Dict[str, Any]] = None
+    dataset: Optional[str] = None
+    quality: Optional[str] = None
+    sample_rate: Optional[int] = None
+    file_size_mb: Optional[float] = None
+    recommended_usage: List[str] = Field(default_factory=lambda: ["audiobook", "news"])  # Always present

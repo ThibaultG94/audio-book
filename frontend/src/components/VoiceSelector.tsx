@@ -30,7 +30,7 @@ interface VoiceMetadata {
     file_size_mb: number;
     processing_speed: "fast" | "medium" | "slow";
   };
-  recommended_usage: string[];
+  recommended_usage?: string[]; // Make optional to handle undefined from API
   description: string;
   best_for: string;
   avatar: string;
@@ -80,10 +80,13 @@ export function VoiceSelector({
       const data = await response.json();
       const voicesData = data.voices || [];
       
-      // Transform API data to match our interface
+      // Transform API data to match our interface and ensure recommended_usage is always array
       const transformedVoices: VoiceMetadata[] = voicesData.map((voice: any) => ({
         ...voice,
         model_path: voice.model_path,
+        recommended_usage: Array.isArray(voice.recommended_usage) 
+          ? voice.recommended_usage 
+          : [], // Default to empty array if undefined or not array
       }));
       
       setVoices(transformedVoices);
@@ -96,15 +99,24 @@ export function VoiceSelector({
   };
 
   const filteredVoices = voices.filter(voice => {
+    // Gender filter
     if (activeFilters.gender !== "all" && voice.speaker.gender !== activeFilters.gender) {
       return false;
     }
+    
+    // Quality filter
     if (activeFilters.quality !== "all" && voice.technical.quality !== activeFilters.quality) {
       return false;
     }
-    if (activeFilters.usage !== "all" && !voice.recommended_usage.includes(activeFilters.usage)) {
-      return false;
+    
+    // Usage filter - now safely handles undefined/empty arrays
+    if (activeFilters.usage !== "all") {
+      const usageArray = voice.recommended_usage || [];
+      if (!usageArray.includes(activeFilters.usage)) {
+        return false;
+      }
     }
+    
     return true;
   });
 
@@ -139,6 +151,9 @@ export function VoiceSelector({
   const VoiceCard = ({ voice }: { voice: VoiceMetadata }) => {
     const qualityBadge = getQualityBadge(voice.technical.quality);
     const isSelected = selectedVoice === voice.model_path;
+    
+    // Safe access to recommended_usage
+    const recommendedUsage = voice.recommended_usage || [];
     
     return (
       <div
@@ -195,22 +210,24 @@ export function VoiceSelector({
           {voice.description}
         </p>
 
-        {/* Usage Tags */}
-        <div className="flex flex-wrap gap-1 mb-4">
-          {voice.recommended_usage.slice(0, 3).map(usage => (
-            <span
-              key={usage}
-              className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md"
-            >
-              {usage}
-            </span>
-          ))}
-          {voice.recommended_usage.length > 3 && (
-            <span className="inline-block px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-md">
-              +{voice.recommended_usage.length - 3}
-            </span>
-          )}
-        </div>
+        {/* Usage Tags - Safe rendering */}
+        {recommendedUsage.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-4">
+            {recommendedUsage.slice(0, 3).map(usage => (
+              <span
+                key={usage}
+                className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md"
+              >
+                {usage}
+              </span>
+            ))}
+            {recommendedUsage.length > 3 && (
+              <span className="inline-block px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-md">
+                +{recommendedUsage.length - 3}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Best For */}
         <div className="flex items-start space-x-2">
