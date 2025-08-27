@@ -9,12 +9,12 @@ This package contains the core processing services:
 
 from .text_extractor import TextExtractor
 from .text_processor import TextProcessor  
-from .tts_engine import PiperTTSEngine
+from .tts_engine import TTSEngine
 from .audio_processor import AudioProcessor
 
 __all__ = [
     "TextExtractor",
     "TextProcessor", 
-    "PiperTTSEngine",
+    "TTSEngine",
     "AudioProcessor"
 ]

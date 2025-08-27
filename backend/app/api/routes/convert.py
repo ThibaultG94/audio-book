@@ -10,7 +10,7 @@ from app.models.schemas import (
 )
 from app.services.text_extractor import TextExtractor
 from app.services.text_processor import TextProcessor
-from app.services.tts_engine import PiperTTSEngine
+from app.services.preview_tts import PreviewTTSEngine
 from app.services.audio_processor import AudioProcessor
 from app.core.config import settings
 
@@ -36,7 +36,7 @@ def process_conversion_job(job_id: str, file_path: Path, request: ConversionRequ
         conversion_jobs[job_id].progress_percent = 40
         
         # Initialize TTS engine
-        tts_engine = PiperTTSEngine(
+        tts_engine = PreviewTTSEngine(
             length_scale=request.length_scale,
             noise_scale=request.noise_scale
         )

@@ -1,92 +1,118 @@
-"""Application configuration with correct voice model paths."""
+"""Application configuration management."""
 
+import os
 from pathlib import Path
+from functools import lru_cache
+from typing import Optional
+
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
+    """Application settings with environment variable loading."""
     
     # Application
-    app_name: str = "TTS Audio Book Converter"
-    debug: bool = False
+    APP_NAME: str = "TTS Audio Book Converter"
+    DEBUG: bool = False
+    VERSION: str = "1.0.0"
     
-    # Paths - All paths relative to backend/ directory
-    voices_dir: Path = Path("voices")
-    storage_dir: Path = Path("storage")
-    uploads_dir: Path = Path("storage/uploads")
-    outputs_dir: Path = Path("storage/outputs")
+    # Server
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
     
-    # TTS Configuration - Auto-detect best available voice
-    voice_model: str = "voices/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx"  # Try medium first
-    length_scale: float = 1.0
-    noise_scale: float = 0.667
-    noise_w: float = 0.8
-    sentence_silence: float = 0.35
-    pause_between_blocks: float = 0.35
+    # CORS
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     
-    # Text Processing
-    max_chunk_chars: int = 1500
+    # File Paths
+    BASE_DIR: Path = Path(__file__).parent.parent.parent
+    VOICES_BASE_PATH: Path = BASE_DIR / "voices"
+    STORAGE_BASE_PATH: Path = BASE_DIR / "storage"
+    UPLOAD_DIR: Path = STORAGE_BASE_PATH / "uploads"
+    OUTPUT_DIR: Path = STORAGE_BASE_PATH / "outputs"
+    TEMP_DIR: Path = STORAGE_BASE_PATH / "temp"
     
-    # File Upload
-    max_file_size: int = 50 * 1024 * 1024  # 50MB
-    allowed_extensions: set[str] = {".pdf", ".epub"}
+    # TTS Configuration
+    DEFAULT_VOICE_MODEL: str = "fr_FR-siwis-low"
+    PIPER_EXECUTABLE: str = "piper"
     
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Auto-detect best available voice model at startup
-        self.voice_model = self._find_best_voice_model()
+    # Default TTS Parameters
+    DEFAULT_LENGTH_SCALE: float = 1.0
+    DEFAULT_NOISE_SCALE: float = 0.667
+    DEFAULT_NOISE_W: float = 0.8
+    DEFAULT_SENTENCE_SILENCE: float = 0.35
+    DEFAULT_PAUSE_BETWEEN_BLOCKS: float = 0.35
     
-    def _find_best_voice_model(self) -> str:
-        """Find the best available voice model in priority order."""
-        
-        # Priority order: medium quality French voices first, then fallback
-        voice_candidates = [
-            "voices/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx",
-            "voices/fr/fr_FR/upmc/medium/fr_FR-upmc-medium.onnx", 
-            "voices/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx",  # Original default
-            "voices/fr/fr_FR/tom/medium/fr_FR-tom-medium.onnx",
-        ]
-        
-        for candidate in voice_candidates:
-            candidate_path = Path(candidate)
-            if candidate_path.exists() and candidate_path.is_file():
-                print(f"🎤 Selected voice model: {candidate}")
-                return candidate
-        
-        # Fallback: search for any .onnx file
-        if self.voices_dir.exists():
-            for onnx_file in self.voices_dir.rglob("*.onnx"):
-                relative_path = str(onnx_file)
-                print(f"🎤 Fallback voice model: {relative_path}")
-                return relative_path
-        
-        # Final fallback to original default (even if it doesn't exist)
-        print(f"⚠️  No voice models found, using default: {voice_candidates[2]}")
-        return voice_candidates[2]
+    # File Processing
+    MAX_FILE_SIZE: int = 52_428_800  # 50MB
+    MAX_CHUNK_CHARS: int = 1500
+    ALLOWED_EXTENSIONS: set[str] = {".pdf", ".epub"}
     
-    class Config:
-        env_file = ".env"
+    model_config = {
+        "env_file": ".env",
+        "case_sensitive": True
+    }
+
+    @property
+    def outputs_dir(self) -> Path:
+        """Alias for OUTPUT_DIR."""
+        return self.OUTPUT_DIR
+    
+    @property
+    def voices_dir(self) -> Path:
+        """Alias for VOICES_BASE_PATH."""
+        return self.VOICES_BASE_PATH
+    
+    @property
+    def voice_model(self) -> str:
+        """Alias for DEFAULT_VOICE_MODEL."""
+        return self.DEFAULT_VOICE_MODEL
+    
+    @property
+    def uploads_dir(self) -> Path:
+        """Alias for UPLOAD_DIR."""
+        return self.UPLOAD_DIR
+    
+    @property
+    def allowed_extensions(self) -> set[str]:
+        """Alias for ALLOWED_EXTENSIONS."""
+        return self.ALLOWED_EXTENSIONS
+    
+    @property
+    def pause_between_blocks(self) -> float:
+        """Alias for DEFAULT_PAUSE_BETWEEN_BLOCKS."""
+        return self.DEFAULT_PAUSE_BETWEEN_BLOCKS
+    
+    @property
+    def length_scale(self) -> float:
+        """Alias for DEFAULT_LENGTH_SCALE."""
+        return self.DEFAULT_LENGTH_SCALE
+    
+    @property
+    def noise_scale(self) -> float:
+        """Alias for DEFAULT_NOISE_SCALE."""
+        return self.DEFAULT_NOISE_SCALE
+    
+    @property
+    def noise_w(self) -> float:
+        """Alias for DEFAULT_NOISE_W."""
+        return self.DEFAULT_NOISE_W
+    
+    @property
+    def sentence_silence(self) -> float:
+        """Alias for DEFAULT_SENTENCE_SILENCE."""
+        return self.DEFAULT_SENTENCE_SILENCE
+
+    def model_post_init(self, __context) -> None:
+        """Ensure required directories exist."""
+        for path in [self.STORAGE_BASE_PATH, self.UPLOAD_DIR, self.OUTPUT_DIR, self.TEMP_DIR]:
+            path.mkdir(parents=True, exist_ok=True)
 
 
-settings = Settings()
+@lru_cache()
+def get_settings() -> Settings:
+    """Get cached application settings."""
+    return Settings()
 
-# Startup voice model information
-if __name__ == "__main__":
-    import os
-    print("🔍 Voice Model Configuration:")
-    print(f"  Selected model: {settings.voice_model}")
-    print(f"  Model exists: {Path(settings.voice_model).exists()}")
-    print(f"  Voices directory: {settings.voices_dir}")
-    print(f"  Voices dir exists: {settings.voices_dir.exists()}")
-    
-    if settings.voices_dir.exists():
-        onnx_files = list(settings.voices_dir.rglob("*.onnx"))
-        print(f"  Available models ({len(onnx_files)}):")
-        for i, model in enumerate(onnx_files[:5]):  # Show first 5
-            size = model.stat().st_size // (1024*1024) if model.exists() else 0
-            print(f"    {i+1}. {model} ({size}MB)")
-        if len(onnx_files) > 5:
-            print(f"    ... and {len(onnx_files)-5} more")
-    else:
-        print("  ❌ Voices directory not found")
+
+# Alias for backward compatibility and easy access
+settings = get_settings()

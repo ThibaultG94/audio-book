@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileUpload } from "@/components/FileUpload";
-import { VoicePreview } from "@/components/VoicePreview";
+import VoicePreview from "@/components/VoicePreview";
 import { api } from "@/lib/api";
 import { FileUploadResponse, ConversionRequest } from "@/lib/types";
 
 interface VoiceSettings { 
   length_scale: number;
   noise_scale: number;
+  noise_w: number;
+  sentence_silence: number;
 }
 
 export default function HomePage() {
@@ -33,6 +35,8 @@ export default function HomePage() {
           voice_model: selectedVoiceSettings.voice,
           length_scale: selectedVoiceSettings.settings.length_scale,
           noise_scale: selectedVoiceSettings.settings.noise_scale,
+          noise_w: selectedVoiceSettings.settings.noise_w,
+          sentence_silence: selectedVoiceSettings.settings.sentence_silence,
         })
       };
 
@@ -94,7 +98,9 @@ export default function HomePage() {
                 </div>
                 <div className="text-sm text-green-700">
                   <p>Vitesse: {selectedVoiceSettings.settings.length_scale}x</p>
-                  <p>Variation: {selectedVoiceSettings.settings.noise_scale}</p>
+                  <p>Expressivité: {selectedVoiceSettings.settings.noise_scale}</p>
+                  <p>Variation phonétique: {selectedVoiceSettings.settings.noise_w}</p>
+                  <p>Pause entre phrases: {selectedVoiceSettings.settings.sentence_silence}s</p>
                   <p className="text-xs mt-1">
                     Ces paramètres seront utilisés pour votre conversion
                   </p>

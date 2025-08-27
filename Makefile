@@ -15,6 +15,7 @@ dev: ## Start development servers (backend + frontend)
 backend: ## Start backend only
 	@./scripts/backend.sh
 
+
 frontend: ## Start frontend only  
 	@./scripts/frontend.sh
 
