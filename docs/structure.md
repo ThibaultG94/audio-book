@@ -2,572 +2,324 @@
 
 ## Architecture Overview
 
+The Audio Book Converter is a full-stack application with advanced voice management capabilities, built using modern Python and Node.js technologies.
+
 ```
 audio-book/                               # 🏠 Project root directory
 ├── backend/                              # 🐍 Python FastAPI backend
 │   ├── app/                              # Main application package
-│   │   ├── __init__.py                   # App init (version, metadata)
-│   │   ├── main.py                       # FastAPI application entry point
+│   │   ├── __init__.py                   # App initialization (version, metadata)
+│   │   ├── main.py                       # FastAPI application entry point with all routes
 │   │   ├── api/                          # REST API layer
-│   │   │   ├── __init__.py               # API package init
-│   │   │   └── routes/                   # HTTP endpoints
-│   │   │       ├── __init__.py           # Routes exports
-│   │   │       ├── upload.py             # PDF/EPUB file upload endpoints
-│   │   │       ├── convert.py            # TTS conversion with background jobs
-│   │   │       ├── audio.py              # Generated audio file serving
-│   │   │       └── preview.py            # 🆕 TTS preview for voice testing
+│   │   │   ├── __init__.py               # API package initialization
+│   │   │   └── routes/                   # HTTP endpoints modules
+│   │   │       ├── __init__.py           # Routes package exports
+│   │   │       ├── upload.py             # File upload endpoints (PDF/EPUB)
+│   │   │       ├── convert.py            # TTS conversion with background job management
+│   │   │       ├── audio.py              # Generated audio file serving and streaming
+│   │   │       └── preview.py            # Enhanced voice preview system with parameters
 │   │   ├── services/                     # Business logic layer
-│   │   │   ├── __init__.py               # Services exports
-│   │   │   ├── text_extractor.py         # PDF/EPUB → text extraction
-│   │   │   ├── text_processor.py         # Text cleaning + chunking
-│   │   │   ├── tts_engine.py             # Piper TTS interface
-│   │   │   ├── audio_processor.py        # WAV concatenation
-│   │   │   └── preview_tts.py            # 🆕 Lightweight TTS for previews
-│   │   ├── models/                       # Pydantic schemas
-│   │   │   ├── __init__.py               # Models exports
-│   │   │   └── schemas.py                # Request/Response models
-│   │   ├── core/                         # System configuration
-│   │   │   ├── __init__.py               # Core exports
-│   │   │   ├── config.py                 # Pydantic settings
-│   │   │   ├── exceptions.py             # Custom exceptions
-│   │   │   └── startup_checks.py         # 🆕 System validation on startup
-│   │   └── utils/                        # General utilities
+│   │   │   ├── __init__.py               # Services package exports
+│   │   │   ├── text_extractor.py         # PDF/EPUB → text extraction (PyPDF2, ebooklib)
+│   │   │   ├── text_processor.py         # Text cleaning, chunking, French optimization
+│   │   │   ├── tts_engine.py             # Piper TTS interface with subprocess management
+│   │   │   ├── audio_processor.py        # WAV concatenation and audio manipulation
+│   │   │   ├── preview_tts.py            # Enhanced TTS for previews with French accent handling
+│   │   │   └── voice_manager.py          # Advanced voice management system with metadata
+│   │   ├── models/                       # Pydantic schemas and data models
+│   │   │   ├── __init__.py               # Models package exports
+│   │   │   └── schemas.py                # Request/Response models, enums, validation
+│   │   ├── core/                         # System configuration and utilities
+│   │   │   ├── __init__.py               # Core package exports
+│   │   │   ├── config.py                 # Pydantic settings with voice auto-detection
+│   │   │   ├── exceptions.py             # Custom exception hierarchy
+│   │   │   └── startup_checks.py         # System validation (Piper TTS, voice models)
+│   │   └── utils/                        # General utilities and helpers
 │   │       └── __init__.py
-│   ├── tests/                            # Unit and integration tests
+│   ├── tests/                            # Complete test suite
 │   │   ├── __init__.py
+│   │   ├── conftest.py                   # Pytest configuration and shared fixtures
+│   │   ├── fixtures/                     # Test data and mock fixtures
+│   │   │   └── __init__.py
 │   │   ├── unit/                         # Service unit tests
-│   │   │   ├── test_text_extractor.py
-│   │   │   ├── test_text_processor.py
-│   │   │   └── test_audio_routes.py
-│   │   └── integration/                  # End-to-end tests
-│   ├── voices/                           # Piper TTS voice models
-│   │   └── fr/fr_FR/siwis/low/          # French voice example
-│   │       ├── fr_FR-siwis-low.onnx     # ONNX neural model
-│   │       └── fr_FR-siwis-low.onnx.json # Voice metadata
+│   │   │   ├── __init__.py
+│   │   │   ├── test_text_extractor.py    # Text extraction tests
+│   │   │   ├── test_text_processor.py    # Text processing tests
+│   │   │   ├── test_audio_routes.py      # Audio endpoints tests
+│   │   │   └── test_voice_manager.py     # Voice management system tests
+│   │   └── integration/                  # End-to-end integration tests
+│   │       ├── __init__.py
+│   │       └── test_voice_api.py         # Complete voice API workflow tests
 │   ├── storage/                          # Runtime file storage
-│   │   ├── uploads/                      # Uploaded PDF/EPUB files
+│   │   ├── uploads/                      # Uploaded PDF/EPUB files (temporary)
 │   │   ├── outputs/                      # Generated WAV audio files
-│   │   └── previews/                     # 🆕 Temporary preview audio files
+│   │   │   └── previews/                 # Voice preview audio files (temporary)
+│   ├── voices/                           # TTS voice models with hierarchical structure
+│   │   ├── voice_metadata.json           # Comprehensive voice metadata database
+│   │   └── fr/                           # French language voices
+│   │       └── fr_FR/                    # French (France) locale
+│   │           ├── siwis/                # Siwis dataset voices (female)
+│   │           │   ├── low/              # Low quality (fast processing)
+│   │           │   │   ├── fr_FR-siwis-low.onnx        # Neural voice model
+│   │           │   │   └── fr_FR-siwis-low.onnx.json   # Voice metadata
+│   │           │   ├── medium/           # Medium quality (balanced)
+│   │           │   │   ├── fr_FR-siwis-medium.onnx
+│   │           │   │   └── fr_FR-siwis-medium.onnx.json
+│   │           └── upmc/                 # UPMC dataset (multi-speaker)
+│   │               └── medium/
+│   │                   ├── fr_FR-upmc-medium.onnx      # Multi-speaker model
+│   │                   └── fr_FR-upmc-medium.onnx.json # Speaker metadata (Jessica+Pierre)
 │   ├── venv/                             # Python virtual environment
-│   ├── requirements.txt                  # Production dependencies
-│   └── requirements-dev.txt              # Development dependencies
+│   ├── requirements.txt                  # Production dependencies (FastAPI, Piper, etc.)
+│   └── requirements-dev.txt              # Development dependencies (pytest, ruff, mypy)
 │
-├── frontend/                             # ⚛️  Next.js 15 frontend
-│   ├── src/                              # TypeScript source code
-│   │   ├── app/                          # Next.js App Router 13+
-│   │   │   ├── layout.tsx                # Root layout (fonts, metadata)
-│   │   │   ├── page.tsx                  # 🏠 Homepage with upload interface
-│   │   │   ├── globals.css               # Global TailwindCSS styles
-│   │   │   └── convert/[id]/             # Dynamic conversion pages
-│   │   │       └── page.tsx              # Conversion status + progress
-│   │   ├── components/                   # Reusable React components
-│   │   │   ├── FileUpload.tsx            # Drag&drop upload with validation
-│   │   │   ├── ConversionStatus.tsx      # Status polling + progress bar
-│   │   │   └── VoicePreview.tsx          # 🆕 Voice testing + parameters
-│   │   ├── lib/                          # Utilities and API client
-│   │   │   ├── api.ts                    # HTTP client for backend API
-│   │   │   └── types.ts                  # Shared TypeScript interfaces
-│   │   └── __tests__/                    # Frontend Jest tests
-│   │       └── components/
-│   │           └── FileUpload.test.tsx   # Upload component tests
+├── frontend/                             # ⚛️ Next.js 15 TypeScript frontend
+│   ├── .next/                            # Next.js build output (generated)
+│   ├── node_modules/                     # Node.js dependencies (generated)
 │   ├── public/                           # Static assets
-│   ├── node_modules/                     # Node.js dependencies
-│   ├── package.json                      # npm configuration + scripts
-│   ├── tsconfig.json                     # TypeScript configuration
-│   ├── next.config.ts                    # Next.js configuration
-│   ├── tailwind.config.js               # TailwindCSS configuration
-│   ├── postcss.config.mjs               # PostCSS configuration
-│   ├── eslint.config.mjs                # ESLint configuration
-│   ├── jest.config.js                    # Jest test configuration
-│   ├── jest.setup.js                     # Test setup + mocks
-│   └── .gitignore                        # Frontend-specific Git ignores
+│   ├── src/                              # TypeScript source code
+│   │   ├── __tests__/                    # Frontend test suite
+│   │   │   └── components/
+│   │   │       └── FileUpload.test.tsx   # Component testing with React Testing Library
+│   │   ├── app/                          # Next.js App Router (13+ structure)
+│   │   │   ├── convert/[id]/             # Dynamic conversion status pages
+│   │   │   │   └── page.tsx              # Individual conversion tracking and progress
+│   │   │   ├── favicon.ico               # Application favicon
+│   │   │   ├── globals.css               # Global TailwindCSS styles and theme
+│   │   │   ├── layout.tsx                # Root layout (fonts, metadata, providers)
+│   │   │   └── page.tsx                  # Homepage with voice preview and file upload
+│   │   ├── components/                   # Reusable React components
+│   │   │   ├── ConversionStatus.tsx      # Conversion progress display with polling
+│   │   │   ├── FileUpload.tsx            # Drag & drop file upload with validation
+│   │   │   ├── VoicePreview.tsx          # Advanced voice testing interface
+│   │   │   └── VoiceSelector.tsx         # Comprehensive voice selection with filters
+│   │   └── lib/                          # Utilities and API integration
+│   │       ├── api.ts                    # HTTP client for backend API communication
+│   │       └── types.ts                  # Shared TypeScript interfaces and types
+│   ├── .gitignore                        # Frontend-specific Git ignore rules
+│   ├── eslint.config.mjs                 # ESLint configuration (ES modules)
+│   ├── jest.config.js                    # Jest testing framework configuration
+│   ├── jest.setup.js                     # Test environment setup and mocks
+│   ├── next.config.ts                    # Next.js configuration (TypeScript)
+│   ├── next-env.d.ts                     # Next.js TypeScript declarations (generated)
+│   ├── package.json                      # npm dependencies and scripts
+│   ├── postcss.config.mjs                # PostCSS configuration for TailwindCSS
+│   ├── README.md                         # Frontend-specific documentation
+│   └── tsconfig.json                     # TypeScript compiler configuration
 │
-├── scripts/                              # 🛠️ DevOps automation scripts
-│   ├── setup.sh                          # 🚀 Complete initial setup
-│   ├── dev.sh                            # 🔥 Development environment startup
-│   ├── backend.sh                        # 🐍 Backend only startup
-│   ├── frontend.sh                       # ⚛️  Frontend only startup
-│   ├── install-piper.sh                  # 🆕 Automatic Piper TTS installation
-│   ├── fix-imports.sh                    # 🔧 Fix Python import issues
-│   ├── build.sh                          # 🏗️ Production build
-│   ├── test.sh                           # 🧪 Comprehensive testing
-│   └── clean.sh                          # 🧹 Clean build artifacts
+├── scripts/                              # 🛠️ DevOps and automation scripts
+│   ├── setup.sh                          # 🚀 Complete initial project setup
+│   ├── dev.sh                            # 🔥 Development environment startup (backend + frontend)
+│   ├── backend.sh                        # 🐍 Backend only startup script
+│   ├── frontend.sh                       # ⚛️ Frontend only startup script
+│   ├── install-voices.sh                 # 🎤 Comprehensive voice installation system
+│   ├── diagnosis.sh                      # 🔍 System diagnostic and troubleshooting
+│   ├── voices.sh                         # 🎵 Voice structure validation and testing
+│   ├── fix-imports.sh                    # 🔧 Python import issue resolution
+│   ├── build.sh                          # 🏗️ Production build preparation
+│   ├── test.sh                           # 🧪 Comprehensive test suite execution
+│   └── clean.sh                          # 🧹 Build artifacts and cache cleanup
 │
 ├── docs/                                 # 📚 Project documentation
-│   └── structure.md                      # 📋 This file (detailed structure)
+│   └── structure.md                      # 📋 This file - complete project structure
 │
-├── docker/                               # 🐳 Docker configuration (future)
-│   ├── Dockerfile                        # Production multi-stage image
-│   └── docker-compose.dev.yml           # Development with services
+├── docker/                               # 🐳 Docker configuration (future expansion)
+│   ├── Dockerfile                        # Production multi-stage image definition
+│   └── docker-compose.dev.yml           # Development environment with services
 │
-├── voices/                               # 🎵 Legacy voice models (compatibility)
-│   └── fr/fr_FR/siwis/low/              # Same structure as backend/voices/
-│
-├── venv/                                 # 🐍 Legacy virtual environment
-├── tts.py                                # 📜 Original CLI script (legacy)
-├── .env                                  # 🔐 Local environment variables
-├── .env.example                          # 📝 Environment variables template  
 ├── .gitignore                            # 🚫 Global Git ignore rules
-├── Makefile                              # ⚡ Quick development commands
-├── captain-definition                    # 🚢 CapRover deployment config
-└── README.md                             # 📖 Main user documentation
+├── Makefile                              # ⚡ Quick development command shortcuts
+├── captain-definition                    # 🚢 CapRover deployment configuration
+└── README.md                             # 📖 Main project documentation and quick start
 ```
 
-## 🔧 Critical Components Details
+## 🔧 Key Components Deep Dive
 
-### Backend - Modular Structure
+### Backend Architecture (`backend/app/`)
 
-#### `app/main.py` - FastAPI Entry Point
-- Application initialization with CORS configuration
-- Route inclusion (/upload, /convert, /audio, /preview)
-- Error handling middleware
-- Startup validation (Piper TTS, voice models)
+#### API Layer (`api/routes/`)
 
-#### `app/api/routes/` - REST Endpoints
-- **upload.py**: POST /api/upload/file (multipart/form-data)
-- **convert.py**: POST /api/convert/start + GET /api/convert/status/{job_id}
-- **audio.py**: GET /api/audio/{job_id} (FileResponse streaming)
-- **preview.py**: POST /api/preview/tts + GET /api/preview/audio/{preview_id}
+- **upload.py**: Handles multipart file uploads with size/type validation
+- **convert.py**: Manages TTS conversion jobs with background processing and status polling
+- **audio.py**: Serves generated audio files with streaming and security checks
+- **preview.py**: **Advanced voice preview system** with parameter customization, voice metadata, and installation guides
 
-#### `app/services/` - Decoupled Business Logic
-- **text_extractor.py**: PyPDF2 + ebooklib + BeautifulSoup integration
-- **text_processor.py**: Unicode normalization + paragraph chunking
-- **tts_engine.py**: Subprocess interface to Piper CLI
-- **audio_processor.py**: WAV concatenation with pauses
-- **preview_tts.py**: Optimized TTS for short text samples
+#### Services Layer (`services/`)
 
-#### `app/core/` - Centralized Configuration
-- **config.py**: Pydantic Settings with type validation
-- **exceptions.py**: Custom exception hierarchy (TTSError, etc.)
-- **startup_checks.py**: Piper TTS + voice models + directory validation
+- **text_extractor.py**: PDF (PyPDF2) and EPUB (ebooklib) text extraction with error handling
+- **text_processor.py**: Text cleaning, normalization, and intelligent chunking for TTS
+- **tts_engine.py**: Piper TTS subprocess interface with timeout and error management
+- **audio_processor.py**: WAV file concatenation with customizable pauses
+- **preview_tts.py**: **Enhanced preview engine** with French text preprocessing and accent preservation
+- **voice_manager.py**: **Comprehensive voice management** with metadata, filtering, recommendations, and validation
 
-### Frontend - Modern Next.js Architecture
+#### Core System (`core/`)
 
-#### App Router (Next.js 13+)
-- **layout.tsx**: Global configuration (Geist fonts, TailwindCSS)
-- **page.tsx**: Homepage with FileUpload + VoicePreview components
-- **convert/[id]/page.tsx**: Real-time status with polling
+- **config.py**: Pydantic settings with environment variable loading and voice auto-detection
+- **exceptions.py**: Structured exception hierarchy for different failure modes
+- **startup_checks.py**: System validation (Piper TTS availability, voice model integrity)
 
-#### Reusable Components
-- **FileUpload.tsx**: react-dropzone + validation + upload progress
-- **ConversionStatus.tsx**: API polling + progress bar + download link
-- **VoicePreview.tsx**: Textarea + TTS test + audio player + settings
+### Frontend Architecture (`frontend/src/`)
 
-#### API Layer
-- **api.ts**: HTTP client with error handling + retry logic + types
-- **types.ts**: Shared interfaces between backend/frontend
+#### App Router (`app/`)
 
-### Automation Scripts
+- **page.tsx**: Homepage with integrated voice preview and file upload interface
+- **layout.tsx**: Global layout with Geist fonts, TailwindCSS, and metadata
+- **convert/[id]/page.tsx**: Dynamic conversion tracking with real-time status updates
 
-#### Development Workflow
-- **setup.sh**: Virtual env creation + npm install + Piper TTS + directories
-- **dev.sh**: Concurrent backend + frontend startup with cleanup
-- **install-piper.sh**: OS detection + automatic Piper binary download
+#### Components (`components/`)
 
-#### Quality Assurance
-- **test.sh**: pytest backend + jest frontend (if configured)
-- **fix-imports.sh**: Python import resolution + __init__.py creation
-- **clean.sh**: Build artifacts cleanup + optional storage cleanup
+- **VoicePreview.tsx**: **Advanced voice testing interface** with parameter sliders, text input, and audio playback
+- **VoiceSelector.tsx**: **Comprehensive voice catalog** with filtering, metadata display, and recommendations
+- **FileUpload.tsx**: Drag & drop upload with react-dropzone integration
+- **ConversionStatus.tsx**: Real-time conversion progress with polling and download links
 
-### Configuration and Deployment
+#### Integration Layer (`lib/`)
 
-#### Environment Variables (.env)
-```bash
-# Application
-DEBUG=false
-APP_NAME="TTS Audio Book Converter"
+- **api.ts**: Type-safe HTTP client with error handling and retry logic
+- **types.ts**: Shared TypeScript interfaces matching backend Pydantic schemas
 
-# TTS Configuration
-VOICE_MODEL=voices/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx
-LENGTH_SCALE=1.0              # Speech speed
-NOISE_SCALE=0.667             # Voice variation
-SENTENCE_SILENCE=0.35         # Pause between sentences
-PAUSE_BETWEEN_BLOCKS=0.35     # Pause between blocks
+### Voice Management System
 
-# File Limits
-MAX_FILE_SIZE=52428800        # 50MB
-MAX_CHUNK_CHARS=1500          # Text chunk size
+#### Voice Structure (`backend/voices/`)
 
-# URLs
-NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+voices/
+├── voice_metadata.json           # Central metadata database
+└── fr/fr_FR/                    # Language/locale hierarchy
+    ├── siwis/                   # Dataset organization
+    │   ├── low/                 # Quality levels
+    │   ├── medium/
+    │   └── high/
+    ├── tom/medium/              # Male voice (Tom)
+    ├── bernard/high/            # Mature male voice
+    └── upmc/medium/             # Multi-speaker (Jessica + Pierre)
 ```
 
-#### CapRover (captain-definition)
-```json
-{
-  "schemaVersion": 2,
-  "dockerfilePath": "./Dockerfile"
-}
-```
+#### Voice Features
 
-## 🚀 Data Flow and Architecture
+- **Metadata System**: Comprehensive voice information (gender, quality, usage recommendations)
+- **Quality Levels**: Low (fast), Medium (balanced), High (premium)
+- **Usage Recommendations**: Audiobook, news, storytelling, educational, documentary
+- **Speaker Information**: Gender, age range, voice style, accent details
+- **Multi-Speaker Support**: Dual-gender voices with individual speaker metadata
+
+### Testing Infrastructure (`backend/tests/`)
+
+#### Test Organization
+
+- **Unit Tests** (`unit/`): Individual service and component testing
+- **Integration Tests** (`integration/`): End-to-end API workflow validation
+- **Fixtures** (`fixtures/`): Reusable test data and mock objects
+- **Configuration** (`conftest.py`): Pytest setup, fixtures, and shared utilities
+
+#### Test Coverage
+
+- Voice management system validation
+- API endpoint functionality and error handling
+- Text processing and TTS engine integration
+- File upload and conversion workflows
+
+### Automation Scripts (`scripts/`)
+
+#### Development Scripts
+
+- **setup.sh**: Complete project initialization (venv, deps, directories)
+- **dev.sh**: Concurrent development server startup with voice system check
+- **diagnosis.sh**: Comprehensive system diagnostic and troubleshooting
+
+#### Voice Management Scripts
+
+- **install-voices.sh**: **Advanced voice installation** with presets (default, premium, minimal, all)
+- **voices.sh**: Voice structure validation, Piper testing, and configuration updates
+
+#### Quality Assurance Scripts
+
+- **test.sh**: Complete test suite execution (backend + frontend)
+- **clean.sh**: Build artifacts and cache cleanup
+- **build.sh**: Production build preparation
+
+## 🔄 Data Flow and System Integration
 
 ### Complete User Workflow
 
-1. **Homepage** (`app/page.tsx`)
-   - VoicePreview component → test voice with custom parameters
-   - FileUpload component → upload PDF/EPUB
+1. **Voice Selection & Preview** (`VoiceSelector` + `VoicePreview`)
 
-2. **File Upload** (`api/routes/upload.py`)
-   - Extension + size validation
-   - Storage in `storage/uploads/`
-   - Return unique `file_id`
+   - Browse available voices with metadata filtering
+   - Test voices with custom text and parameters
+   - Real-time audio generation and playback
+   - Parameter optimization (speed, expressivity, pauses)
 
-3. **Conversion Start** (`api/routes/convert.py`)
-   - Text extraction (`text_extractor.py`)
-   - Cleaning + chunking (`text_processor.py`)
-   - TTS synthesis by blocks (`tts_engine.py`)
-   - Audio concatenation (`audio_processor.py`)
-   - Async job with status polling
+2. **File Upload** (`FileUpload` → `upload.py`)
 
-4. **Real-time Status** (`convert/[id]/page.tsx`)
-   - Polling GET `/api/convert/status/{job_id}`
-   - Progress bar display
-   - Download link when completed
+   - Drag & drop PDF/EPUB files
+   - Client-side validation (type, size)
+   - Server-side security checks and storage
 
-5. **Audio Download** (`api/routes/audio.py`)
-   - FileResponse streaming
-   - Appropriate headers (Content-Disposition)
+3. **TTS Conversion** (`convert.py` + services)
 
-### Voice Preview Workflow (New)
+   - Text extraction with error handling
+   - Intelligent text chunking and cleaning
+   - Voice-optimized synthesis with selected parameters
+   - Background job processing with progress tracking
 
-1. **Preview Interface** (`components/VoicePreview.tsx`)
-   - Customizable text textarea (max 500 chars)
-   - Voice parameter sliders (speed, variation)
-   - Available voice selection
+4. **Status Monitoring** (`ConversionStatus`)
 
-2. **Preview Generation** (`api/routes/preview.py`)
-   - POST `/api/preview/tts` with short text
-   - Fast processing (`preview_tts.py`)
-   - Temporary storage `storage/previews/`
+   - Real-time progress polling
+   - Error reporting and retry mechanisms
+   - Completion notifications
 
-3. **Audio Playback** 
-   - GET `/api/preview/audio/{preview_id}`
-   - Integrated HTML5 player
-   - Download option for preview
+5. **Audio Delivery** (`audio.py`)
+   - Secure file serving with streaming
+   - Download optimization and caching
+   - Temporary file cleanup
 
-## 📊 Technologies and Dependencies
+### Voice System Workflow
 
-### Backend Python Stack
-```txt
-# Core framework
-fastapi==0.104.1              # Modern REST API framework
-uvicorn[standard]==0.24.0     # ASGI server
+1. **Voice Discovery** (`VoiceManager.load_metadata()`)
 
-# Configuration  
-pydantic-settings==2.1.0      # Settings with validation
+   - Scan installed voice models
+   - Parse ONNX metadata files
+   - Generate comprehensive voice database
 
-# Text processing
-PyPDF2==3.0.1                 # PDF text extraction
-ebooklib==0.18                # EPUB text extraction  
-beautifulsoup4==4.12.2        # HTML parsing
-lxml==4.9.3                   # Fast XML parser
+2. **Voice Filtering** (`VoiceSelector`)
 
-# Development tools
-pytest==7.4.3                 # Testing framework
-ruff==0.1.6                   # Linting + formatting
-mypy==1.7.1                   # Type checking
-```
+   - Gender-based filtering (male, female, multi)
+   - Quality-based selection (low, medium, high)
+   - Usage-based recommendations (audiobook, news, etc.)
 
-### Frontend Node.js Stack
-```json
-{
-  "dependencies": {
-    "next": "15.5.0",           // React SSR framework
-    "react": "19.1.0",          // User interface library  
-    "react-dom": "19.1.0",      // React DOM integration
-    "react-dropzone": "^14.3.8", // Drag&drop file upload
-    "lucide-react": "^0.540.0"  // Modern icon library
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4", // Utility-first CSS
-    "typescript": "^5",          // Static typing
-    "eslint": "^9",             // JavaScript linting
-    "jest": "^29.7.0"           // Unit testing framework
-  }
-}
-```
+3. **Voice Validation** (`startup_checks.py`)
 
-### External System Dependencies
-- **Piper TTS**: System binary for neural voice synthesis
-- **Voice Models**: ONNX + JSON files (neural networks)
-- **Docker**: Production containerization (optional)
+   - Piper TTS availability verification
+   - Voice model integrity checks
+   - System compatibility validation
 
-## 🔄 Migration and Evolution
+4. **Preview Generation** (`preview_tts.py`)
+   - French-optimized text preprocessing
+   - Parameter-aware synthesis
+   - Temporary audio file management
 
-### Legacy Files Maintained
-- `tts.py`: Original CLI script (still functional)
-- `voices/`: Old voice models location
-- `venv/`: Legacy virtual environment at root
+## 🚀 Development and Deployment
 
-### Architectural Improvements v1 → v2
-- ✅ Monorepo with separated backend/frontend
-- ✅ Decoupled REST API with FastAPI
-- ✅ Modern Next.js + TypeScript interface
-- ✅ Development automation scripts
-- ✅ Structured testing approach
-- ✅ Centralized configuration
-- 🆕 Integrated voice preview system
-- 🆕 Robust startup validation
-- 🔜 Multi-voice support
-- 🔜 Redis job queue (optional)
-- 🔜 User authentication
-- 🔜 Conversion history
+### Development Environment
 
-## 🚀 Available Commands and Scripts
+- **Hot Reload**: FastAPI auto-reload + Next.js turbo dev
+- **Type Safety**: mypy for Python + strict TypeScript
+- **Code Quality**: ruff + ESLint with automated formatting
+- **Testing**: pytest + Jest with comprehensive coverage
 
-### Makefile Quick Commands
-```bash
-make setup      # Complete initial installation
-make dev        # Development (backend + frontend)
-make backend    # Backend only (FastAPI)
-make frontend   # Frontend only (Next.js)
-make test       # Comprehensive testing
-make build      # Production build
-make clean      # Clean build artifacts
-make help       # Show available commands
-```
+### Production Deployment
 
-### Detailed Script Functions
+- **Containerization**: Multi-stage Dockerfile for optimized images
+- **Platform**: CapRover PaaS with automated deployment
+- **Configuration**: Environment-based settings management
+- **Monitoring**: Health checks and system diagnostics
 
-#### `scripts/setup.sh` - Initial Installation
-- Python virtual environment creation
-- Backend + frontend dependency installation  
-- Automatic Piper TTS detection and installation
-- Storage directory creation
-- .env file generation
-- System validation
+### Voice System Management
 
-#### `scripts/dev.sh` - Development Environment
-- Concurrent backend (port 8000) + frontend (port 3000) startup
-- Auto-reload on file changes
-- Process cleanup management (Ctrl+C)
-- Real-time log display
+- **Installation**: Automated voice download and setup
+- **Validation**: Continuous voice model integrity checks
+- **Updates**: Version-controlled voice metadata system
+- **Scaling**: Support for additional languages and voice providers
 
-#### `scripts/install-piper.sh` - Piper TTS Installation
-- Automatic OS/architecture detection
-- Appropriate GitHub release download
-- System installation (/usr/local/bin)
-- Post-installation validation tests
-
-#### `scripts/fix-imports.sh` - Python Issues Resolution
-- Missing directory creation
-- __init__.py file generation
-- Application import testing
-- Modular structure validation
-
-## 🧪 Testing and Validation
-
-### Test Structure
-```
-backend/tests/
-├── __init__.py
-├── conftest.py                       # Shared pytest fixtures
-├── unit/                             # Service unit tests
-│   ├── test_text_extractor.py        # PDF/EPUB extraction tests
-│   ├── test_text_processor.py        # Text cleaning tests
-│   ├── test_tts_engine.py            # Piper interface tests
-│   └── test_audio_routes.py          # Audio endpoint tests
-└── integration/                      # End-to-end tests
-    └── test_full_workflow.py         # Complete upload→conversion
-
-frontend/src/__tests__/
-├── components/
-│   ├── FileUpload.test.tsx           # Upload component tests
-│   ├── ConversionStatus.test.tsx     # Status polling tests  
-│   └── VoicePreview.test.tsx         # Voice preview tests
-└── lib/
-    └── api.test.ts                   # API client tests
-```
-
-### Test Commands
-```bash
-# Backend only
-cd backend && source venv/bin/activate
-python -m pytest tests/ -v
-python -m pytest tests/ --cov=app --cov-report=html
-
-# Frontend only  
-cd frontend && npm test
-npm test -- --watch --coverage
-
-# Complete testing
-make test  # or ./scripts/test.sh
-```
-
-## 🐳 Docker and Deployment
-
-### Production Docker Structure
-```
-docker/
-├── Dockerfile                        # Multi-stage production build
-├── Dockerfile.dev                    # Development image
-├── docker-compose.prod.yml           # Production with services
-└── docker-compose.dev.yml            # Local development
-```
-
-### Multi-stage Dockerfile Example
-```dockerfile
-# Stage 1: Build frontend
-FROM node:18-alpine AS frontend-builder
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci --only=production
-COPY frontend/ .
-RUN npm run build
-
-# Stage 2: Python backend + frontend static files
-FROM python:3.11-slim AS production
-RUN apt-get update && apt-get install -y \
-    wget curl && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Piper TTS
-RUN wget https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz && \
-    tar -xzf piper_amd64.tar.gz && \
-    mv piper/piper /usr/local/bin/ && \
-    rm -rf piper*
-
-WORKDIR /app
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY backend/ ./backend/
-COPY --from=frontend-builder /app/frontend/out ./frontend/out
-COPY voices/ ./voices/
-
-EXPOSE 8000
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-### CapRover Deployment Configuration
-```json
-{
-  "schemaVersion": 2,
-  "dockerfilePath": "./docker/Dockerfile",
-  "context": ".",
-  "containerHttpPort": "8000"
-}
-```
-
-## 🔐 Security and Best Practices
-
-### User Input Validation
-- File size limits (50MB MAX_FILE_SIZE)
-- Extension validation (.pdf, .epub only)
-- Filename sanitization (UUID + extension)
-- Preview text limits (500 chars max)
-- TTS parameter validation (defined ranges)
-
-### Isolation and Sandboxing
-- Subprocess TTS processing with timeouts
-- File storage in dedicated directories
-- Path traversal protection (relative_to checks)
-- Automatic temporary file cleanup
-
-### Environment Variable Security
-```bash
-# Never commit sensitive variables
-DATABASE_URL=postgresql://...
-SECRET_KEY=super-secret-key
-OPENAI_API_KEY=sk-...
-
-# Public variables are safe
-NEXT_PUBLIC_API_URL=https://api.domain.com
-VOICE_MODEL=voices/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx
-```
-
-## 🔧 Advanced Configuration
-
-### Pydantic Settings (app/core/config.py)
-```python
-class Settings(BaseSettings):
-    # Application
-    app_name: str = "TTS Audio Book Converter"
-    debug: bool = False
-    
-    # Paths  
-    voices_dir: Path = Path("voices")
-    storage_dir: Path = Path("storage")
-    uploads_dir: Path = Path("storage/uploads")
-    outputs_dir: Path = Path("storage/outputs")
-    
-    # TTS Engine
-    voice_model: str = "voices/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx"
-    length_scale: float = 1.0
-    noise_scale: float = 0.667
-    noise_w: float = 0.8
-    sentence_silence: float = 0.35
-    pause_between_blocks: float = 0.35
-    
-    # Processing  
-    max_chunk_chars: int = 1500
-    max_file_size: int = 50 * 1024 * 1024
-    allowed_extensions: set[str] = {".pdf", ".epub"}
-    
-    class Config:
-        env_file = ".env"
-```
-
-### Next.js Configuration (next.config.ts)
-```typescript
-const nextConfig: NextConfig = {
-  output: 'export',                    // Static export for CapRover
-  trailingSlash: true,                // Server compatibility
-  images: { unoptimized: true },      // No image optimization
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
-      }
-    ]
-  }
-}
-```
-
-## 📈 Monitoring and Observability
-
-### Structured Logging
-```python
-import structlog
-
-logger = structlog.get_logger()
-
-# In services
-logger.info("conversion_started", 
-           file_id=file_id, 
-           job_id=job_id,
-           voice_model=voice_model)
-
-logger.error("tts_generation_failed",
-            error=str(e),
-            text_length=len(text),
-            voice_model=voice_model)
-```
-
-### Application Metrics
-```python
-# Example metrics to track
-- conversion_duration_seconds
-- file_upload_size_bytes  
-- tts_generation_errors_total
-- voice_preview_requests_total
-- concurrent_conversions_gauge
-```
-
-### Health Checks
-```python
-# backend/app/main.py
-@app.get("/health")
-async def health_check():
-    checks = StartupValidator.validate_all()
-    status = "healthy" if all(checks.values()) else "unhealthy"
-    return {
-        "status": status,
-        "checks": checks,
-        "timestamp": datetime.utcnow().isoformat()
-    }
-```
-
-This modular structure ensures a robust, maintainable, and deployable application with all modern development best practices.
+This structure represents a mature, production-ready application with comprehensive voice management capabilities, robust testing infrastructure, and automated deployment processes.
