@@ -17,8 +17,14 @@ export function FileUpload({ onFileUploaded, isLoading }: FileUploadProps) {
 
   const validateFile = (file: File): string | null => {
     // Check file type
-    const allowedTypes = ['application/pdf', 'application/epub+zip'];
-    const allowedExtensions = ['.pdf', '.epub'];
+    const allowedTypes = [
+      'application/pdf', 
+      'application/epub+zip', 
+      'text/plain',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/rtf'
+    ];
+    const allowedExtensions = ['.pdf', '.epub', '.txt', '.docx', '.rtf'];
     
     const hasValidType = allowedTypes.includes(file.type);
     const hasValidExtension = allowedExtensions.some(ext => 
@@ -26,7 +32,7 @@ export function FileUpload({ onFileUploaded, isLoading }: FileUploadProps) {
     );
     
     if (!hasValidType && !hasValidExtension) {
-      return "Format de fichier non supporté. Seuls les PDF et EPUB sont acceptés.";
+      return "Format de fichier non supporté. Formats acceptés : PDF, EPUB, TXT, DOCX, RTF.";
     }
 
     // Check file size (50MB max)
@@ -144,7 +150,7 @@ export function FileUpload({ onFileUploaded, isLoading }: FileUploadProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.epub"
+          accept=".pdf,.epub,.txt,.docx,.rtf"
           onChange={handleFileInputChange}
           className="hidden"
           disabled={isLoading}
@@ -201,7 +207,7 @@ export function FileUpload({ onFileUploaded, isLoading }: FileUploadProps) {
                 <p className="text-gray-600">
                   Glissez-déposez ou cliquez pour sélectionner
                 </p>
-                <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center justify-center space-x-3 text-sm text-gray-500">
                   <div className="flex items-center space-x-1">
                     <span className="w-2 h-2 bg-red-500 rounded-full"></span>
                     <span>PDF</span>
@@ -209,6 +215,18 @@ export function FileUpload({ onFileUploaded, isLoading }: FileUploadProps) {
                   <div className="flex items-center space-x-1">
                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                     <span>EPUB</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <span>TXT</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                    <span>DOCX</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                    <span>RTF</span>
                   </div>
                   <span>•</span>
                   <span>Max 50MB</span>
@@ -266,6 +284,15 @@ export function FileUpload({ onFileUploaded, isLoading }: FileUploadProps) {
             </div>
             <div>
               <strong className="text-gray-700">📚 EPUB :</strong> Format idéal pour les livres électroniques.
+            </div>
+            <div>
+              <strong className="text-gray-700">📝 TXT :</strong> Fichiers texte simple, encodage automatique détecté.
+            </div>
+            <div>
+              <strong className="text-gray-700">📄 DOCX :</strong> Documents Microsoft Word modernes.
+            </div>
+            <div>
+              <strong className="text-gray-700">📋 RTF :</strong> Rich Text Format, compatible multi-plateforme.
             </div>
             <div className="text-xs text-gray-400 pt-2 border-t">
               💡 Astuce : Les documents avec un texte bien structuré donnent de meilleurs résultats audio.

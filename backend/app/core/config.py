@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     # File Processing
     MAX_FILE_SIZE: int = 52_428_800  # 50MB
     MAX_CHUNK_CHARS: int = 1500
-    ALLOWED_EXTENSIONS: set[str] = {".pdf", ".epub"}
+    ALLOWED_EXTENSIONS: set[str] = {".pdf", ".epub", ".txt", ".docx", ".rtf"}
     
     model_config = {
         "env_file": ".env",

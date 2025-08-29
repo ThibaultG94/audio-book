@@ -11,26 +11,64 @@ class TextProcessor:
     @staticmethod
     def clean_text(text: str) -> str:
         """
-        Clean and normalize text for TTS processing.
+        Clean and normalize text for TTS processing, ensuring Piper compatibility.
         
         Args:
             text: Raw extracted text
             
         Returns:
-            Cleaned and normalized text
+            Cleaned and normalized text safe for Piper TTS
         """
-        # Unicode normalization - decompose then remove combining characters
-        text = unicodedata.normalize("NFKD", text)
-        text = "".join(c for c in text if not unicodedata.combining(c))
+        # Step 1: Use NFC normalization (composed form) to avoid decomposed characters
+        text = unicodedata.normalize("NFC", text)
         
-        # Clean up whitespace
+        # Step 2: Remove problematic characters that cause Piper issues
+        # Remove combining diacritical marks that Piper can't handle
+        text = "".join(c for c in text if unicodedata.category(c) != 'Mn')
+        
+        # Step 3: Replace specific problematic characters
+        replacements = {
+            # Remove phonetic symbols that cause Piper errors
+            '\u0303': '',  # COMBINING TILDE (phonetic nasalization)
+            '\u0301': '',  # COMBINING ACUTE ACCENT
+            '\u0300': '',  # COMBINING GRAVE ACCENT  
+            '\u0302': '',  # COMBINING CIRCUMFLEX ACCENT
+            '\u030C': '',  # COMBINING CARON
+            '\u0327': '',  # COMBINING CEDILLA
+            # Remove zero-width characters
+            '\u200B': '',  # ZERO WIDTH SPACE
+            '\u200C': '',  # ZERO WIDTH NON-JOINER
+            '\u200D': '',  # ZERO WIDTH JOINER
+            '\uFEFF': '',  # ZERO WIDTH NO-BREAK SPACE
+            # Replace problematic quotation marks
+            '"': '"',      # LEFT DOUBLE QUOTATION MARK
+            '"': '"',      # RIGHT DOUBLE QUOTATION MARK
+            ''': "'",      # LEFT SINGLE QUOTATION MARK
+            ''': "'",      # RIGHT SINGLE QUOTATION MARK
+            # Replace problematic dashes
+            '—': '-',      # EM DASH
+            '–': '-',      # EN DASH
+            # Replace ellipsis
+            '…': '...',    # HORIZONTAL ELLIPSIS
+        }
+        
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        
+        # Step 4: Keep only safe characters for French TTS
+        # Allow basic Latin, French accented characters, digits, punctuation, and whitespace
+        safe_pattern = r'[a-zA-Z0-9àáâäçèéêëïîôöùúûüÿÀÁÂÄÇÈÉÊËÏÎÔÖÙÚÛÜŸ\s\.,!?;:()\-\'"«»\n]'
+        text = ''.join(c for c in text if re.match(safe_pattern, c))
+        
+        # Step 5: Clean up whitespace
         text = re.sub(r"[ \t]+", " ", text)  # Multiple spaces/tabs -> single space
         text = re.sub(r"\n{2,}", "\n\n", text)  # Multiple newlines -> double newline
+        text = re.sub(r"^\s+|\s+$", "", text, flags=re.MULTILINE)  # Trim lines
         
         return text.strip()
     
     @staticmethod
-    def chunk_paragraphs(text: str, max_chars: int = 1500) -> Generator[str, None, None]:
+    def chunk_paragraphs(text: str, max_chars: int = 800) -> Generator[str, None, None]:
         """
         Split text into chunks suitable for TTS processing.
         

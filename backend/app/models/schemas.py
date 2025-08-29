@@ -29,6 +29,8 @@ class ConversionRequest(BaseModel):
     voice_model: Optional[str] = None
     length_scale: Optional[float] = Field(default=1.0, ge=0.5, le=2.0)
     noise_scale: Optional[float] = Field(default=0.667, ge=0.0, le=1.0)
+    noise_w: Optional[float] = Field(default=0.8, ge=0.0, le=1.0)
+    sentence_silence: Optional[float] = Field(default=0.35, ge=0.1, le=2.0)
 
 
 class ConversionResponse(BaseModel):

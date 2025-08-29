@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
+import asyncio
 from pathlib import Path
 import uuid
 import tempfile
@@ -10,7 +11,7 @@ from app.models.schemas import (
 )
 from app.services.text_extractor import TextExtractor
 from app.services.text_processor import TextProcessor
-from app.services.preview_tts import PreviewTTSEngine
+from app.services.tts_engine import TTSEngine
 from app.services.audio_processor import AudioProcessor
 from app.core.config import settings
 
@@ -19,7 +20,7 @@ router = APIRouter()
 # In-memory job storage (use Redis/DB in production)
 conversion_jobs: dict[str, ConversionStatusResponse] = {}
 
-def process_conversion_job(job_id: str, file_path: Path, request: ConversionRequest):
+async def process_conversion_job(job_id: str, file_path: Path, request: ConversionRequest):
     """Background task to process TTS conversion."""
     try:
         # Update status to processing
@@ -36,10 +37,37 @@ def process_conversion_job(job_id: str, file_path: Path, request: ConversionRequ
         conversion_jobs[job_id].progress_percent = 40
         
         # Initialize TTS engine
-        tts_engine = PreviewTTSEngine(
-            length_scale=request.length_scale,
-            noise_scale=request.noise_scale
-        )
+        tts_engine = TTSEngine()
+        
+        # Resolve voice model path
+        voice_model = request.voice_model or settings.DEFAULT_VOICE_MODEL
+        voice_path = None
+        
+        # Search for voice model file
+        voice_path = None
+        
+        # Try exact path first (relative to voices_dir)
+        candidate_path = settings.voices_dir / voice_model
+        if candidate_path.exists():
+            voice_path = candidate_path
+        else:
+            # If voice_model starts with "voices/", try removing that prefix
+            if voice_model.startswith("voices/"):
+                candidate_path = settings.voices_dir / voice_model[7:]  # Remove "voices/" prefix
+                if candidate_path.exists():
+                    voice_path = candidate_path
+            
+            # If still not found, search recursively by filename
+            if not voice_path:
+                # Extract filename from path
+                filename = Path(voice_model).name
+                for candidate in settings.voices_dir.rglob(filename):
+                    if candidate.suffix == ".onnx":
+                        voice_path = candidate
+                        break
+        
+        if not voice_path:
+            raise Exception(f"Voice model not found: {voice_model}")
         
         # Generate audio for each chunk
         temp_wavs = []
@@ -48,7 +76,15 @@ def process_conversion_job(job_id: str, file_path: Path, request: ConversionRequ
             
             for i, chunk in enumerate(chunks):
                 chunk_wav = tmp_path / f"chunk_{i:05d}.wav"
-                tts_engine.text_to_wav(chunk, chunk_wav)
+                await tts_engine.synthesize_text(
+                    text=chunk,
+                    voice_path=str(voice_path),
+                    output_path=str(chunk_wav),
+                    length_scale=request.length_scale or settings.DEFAULT_LENGTH_SCALE,
+                    noise_scale=request.noise_scale or settings.DEFAULT_NOISE_SCALE,
+                    noise_w=request.noise_w or settings.DEFAULT_NOISE_W,
+                    sentence_silence=request.sentence_silence or settings.DEFAULT_SENTENCE_SILENCE
+                )
                 temp_wavs.append(chunk_wav)
                 
                 # Update progress
@@ -99,8 +135,8 @@ async def start_conversion(request: ConversionRequest, background_tasks: Backgro
     )
     conversion_jobs[job_id] = job_status
     
-    # Start background processing
-    background_tasks.add_task(process_conversion_job, job_id, file_path, request)
+    # Start background processing (run async task)
+    asyncio.create_task(process_conversion_job(job_id, file_path, request))
     
     return ConversionResponse(
         job_id=job_id,

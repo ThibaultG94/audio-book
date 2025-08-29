@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+backend/lib/
 lib64/
 parts/
 sdist/
@@ -219,6 +219,18 @@ frontend/.env.local
 backend/__pycache__/
 backend/.pytest_cache/
 backend/storage/
+backend/node_modules/
+
+# Node modules at any level
+node_modules/
+**/node_modules/
+
+# Temporary package files (if not project dependencies)
+backend/package*.json
+test*.txt
+test*.py
+**/test*.txt
+**/test*.py
 
 # Build artifacts
 build/

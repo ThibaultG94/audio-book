@@ -43,6 +43,13 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
     loadDefaultParameters()
   }, [])
 
+  // Notify parent when settings change (only if voice is already selected)
+  useEffect(() => {
+    if (selectedVoice && onVoiceTest) {
+      onVoiceTest(selectedVoice, settings)
+    }
+  }, [settings.length_scale, settings.noise_scale, settings.noise_w, settings.sentence_silence])
+
   // Handle audio playback events
   useEffect(() => {
     const audio = audioRef.current
@@ -146,7 +153,7 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
         }
       }
 
-      // Notify parent component
+      // Notify parent component with settings
       onVoiceTest?.(selectedVoice, settings)
 
     } catch (err) {
@@ -222,7 +229,13 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
           🎭 Sélection de la voix
         </h3>
         <VoiceSelector
-          onVoiceSelect={setSelectedVoice}
+          onVoiceSelect={(voice) => {
+            setSelectedVoice(voice)
+            // Immediately notify parent with current settings
+            if (onVoiceTest) {
+              onVoiceTest(voice, settings)
+            }
+          }}
           selectedVoice={selectedVoice}
         />
       </div>

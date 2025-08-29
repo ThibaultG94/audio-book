@@ -40,13 +40,22 @@ export default function HomePage() {
         })
       };
 
+      console.log("Starting conversion with request:", conversionRequest);
       const conversionResponse = await api.startConversion(conversionRequest);
+      console.log("Conversion response:", conversionResponse);
+
+      // Ensure we have a valid job_id before redirecting
+      if (!conversionResponse.job_id) {
+        throw new Error("Réponse invalide - pas de job_id reçu");
+      }
 
       // Redirect to conversion status page
       router.push(`/convert/${conversionResponse.job_id}`);
     } catch (error) {
       console.error("Failed to start conversion:", error);
       setIsConverting(false);
+      // TODO: Show error message to user
+      alert(`Erreur de conversion: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
   };
 
@@ -59,13 +68,19 @@ export default function HomePage() {
       <div className="container mx-auto px-4 py-16">
         
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Audio Book Converter
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            📚 ➜ 🎧
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Convertissez vos PDF et EPUB en livres audio de haute qualité 
-            grâce à l'intelligence artificielle.
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Audio Book Converter
+          </h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Convertissez vos documents en livres audio avec des voix IA naturelles.
+            <br />
+            <span className="text-base text-gray-500">
+              PDF • EPUB • TXT • DOCX • RTF - Traitement local et sécurisé
+            </span>
           </p>
         </div>
 
@@ -144,12 +159,21 @@ export default function HomePage() {
             {/* File Format Support */}
             <div className="text-center space-y-2">
               <p className="text-sm text-gray-500">Formats supportés :</p>
-              <div className="flex justify-center space-x-4">
+              <div className="flex justify-center flex-wrap gap-2">
                 <span className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
                   PDF
                 </span>
                 <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
                   EPUB
+                </span>
+                <span className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                  TXT
+                </span>
+                <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs rounded-full font-medium">
+                  DOCX
+                </span>
+                <span className="px-3 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
+                  RTF
                 </span>
               </div>
               <p className="text-xs text-gray-400">

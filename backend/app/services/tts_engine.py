@@ -81,16 +81,29 @@ class TTSEngine:
             if not text.strip():
                 raise TTSEngineError("Empty text provided")
             
+            # Limit text size to prevent memory issues (max 1000 chars per chunk)
+            if len(text) > 1000:
+                logger.warning(f"Text chunk is large ({len(text)} chars), this might cause memory issues")
+                # Truncate if too large to prevent Piper crash
+                text = text[:1000] + "..."
+            
             voice_file = Path(voice_path)
+            logger.info(f"Looking for voice model at: {voice_file.absolute()}")
             if not voice_file.exists():
+                logger.error(f"Voice model file not found: {voice_file.absolute()}")
+                # Try to find similar files for debugging
+                parent_dir = voice_file.parent
+                if parent_dir.exists():
+                    logger.error(f"Files in {parent_dir}: {list(parent_dir.iterdir())}")
                 raise TTSEngineError(f"Voice model file not found: {voice_path}")
             
             # Ensure output directory exists
             output_file = Path(output_path)
             output_file.parent.mkdir(parents=True, exist_ok=True)
             
-            # Prepare Piper command
+            # Prepare Piper command with resource limits
             cmd = [
+                "timeout", "60s",  # Hard timeout at 60 seconds
                 self.piper_executable,
                 "--model", str(voice_file),
                 "--output_file", str(output_file),
@@ -102,7 +115,7 @@ class TTSEngine:
             
             logger.debug(f"Running Piper command: {' '.join(cmd)}")
             
-            # Run Piper synthesis
+            # Run Piper synthesis with timeout
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdin=asyncio.subprocess.PIPE,
@@ -110,13 +123,28 @@ class TTSEngine:
                 stderr=asyncio.subprocess.PIPE
             )
             
-            # Send text to Piper via stdin
-            stdout, stderr = await process.communicate(text.encode('utf-8'))
+            # Send text to Piper via stdin with timeout (60 seconds max)
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(text.encode('utf-8')), 
+                    timeout=60.0
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"Piper synthesis timed out after 60 seconds")
+                process.kill()
+                await process.wait()
+                raise TTSEngineError("TTS synthesis timed out")
             
             # Check for errors
             if process.returncode != 0:
-                error_msg = stderr.decode('utf-8') if stderr else "Unknown Piper error"
+                stderr_text = stderr.decode('utf-8') if stderr else ""
+                stdout_text = stdout.decode('utf-8') if stdout else ""
+                error_msg = stderr_text or stdout_text or f"Piper exited with code {process.returncode}"
                 logger.error(f"Piper synthesis failed: {error_msg}")
+                logger.error(f"Command was: {' '.join(cmd)}")
+                logger.error(f"Return code: {process.returncode}")
+                logger.error(f"STDERR: {stderr_text}")
+                logger.error(f"STDOUT: {stdout_text}")
                 raise TTSEngineError(f"TTS synthesis failed: {error_msg}")
             
             # Verify output file was created
