@@ -1,62 +1,85 @@
-# Build stage
-FROM python:3.11-slim as builder
+# Build stage - Alpine for security
+FROM python:3.11-alpine AS builder
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     gcc \
-    g++ \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    musl-dev \
+    python3-dev \
+    mupdf-dev \
+    freetype-dev \
+    harfbuzz-dev \
+    jpeg-dev \
+    openjpeg-dev \
+    libpng-dev \
+    tiff-dev \
+    libffi-dev \
+    openssl-dev
 
 WORKDIR /app
 
-# Copy backend requirements
+# Copy and install dependencies
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN python -m venv /opt/venv && \
+    /opt/venv/bin/pip install --upgrade pip && \
+    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
-# Runtime stage
-FROM python:3.11-slim
+# Runtime stage - Minimal Alpine
+FROM python:3.11-alpine
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
+# Install runtime dependencies only
+RUN apk add --no-cache \
     ffmpeg \
     wget \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    mupdf \
+    mupdf-tools \
+    freetype \
+    harfbuzz \
+    jpeg \
+    openjpeg \
+    libpng \
+    tiff \
+    libffi \
+    openssl \
+    && rm -rf /var/cache/apk/*
 
-# Install Piper TTS
-RUN wget -O piper.tar.gz https://github.com/rhasspy/piper/releases/latest/download/piper_linux_x86_64.tar.gz \
-    && tar -xzf piper.tar.gz \
-    && mv piper /usr/local/bin/ \
-    && rm piper.tar.gz
+# Copy virtual environment
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Piper binary
+RUN wget -q -O /tmp/piper.tar.gz \
+    https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_linux_x86_64.tar.gz && \
+    tar -xzf /tmp/piper.tar.gz -C /tmp && \
+    mv /tmp/piper /usr/local/bin/ && \
+    chmod +x /usr/local/bin/piper && \
+    rm -rf /tmp/*
 
 # Create directories
-RUN mkdir -p /models/piper /tmp/tts_processing
+RUN mkdir -p /app /models/piper /tmp/tts_processing
 
-# Download default Piper model
-RUN wget -O /models/piper/en_US-amy-medium.onnx \
-    https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/en_US-amy-medium.onnx \
-    && wget -O /models/piper/en_US-amy-medium.onnx.json \
+# Download default voice
+RUN wget -q -O /models/piper/en_US-amy-medium.onnx \
+    https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/en_US-amy-medium.onnx && \
+    wget -q -O /models/piper/en_US-amy-medium.onnx.json \
     https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/en_US-amy-medium.onnx.json
-
-# Copy Python packages from builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
 
 WORKDIR /app
 
-# Copy backend application
+# Copy application
 COPY backend/app/ ./app/
 
 # Create non-root user
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app /tmp/tts_processing /models
+RUN addgroup -g 1000 appgroup && \
+    adduser -D -u 1000 -G appgroup appuser && \
+    chown -R appuser:appgroup /app /tmp/tts_processing /models
 
 USER appuser
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

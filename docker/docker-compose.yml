@@ -5,37 +5,80 @@ services:
     build:
       context: ../
       dockerfile: docker/Dockerfile.backend
+    image: audio-book-backend:latest
+    container_name: audio-book-backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
-      - ../backend/app:/app/app
+      # For development only - remove in production
+      - ../backend/app:/app/app:ro
+      # Persistent volumes
       - tts_processing:/tmp/tts_processing
       - models:/models
+      - uploads:/app/storage/uploads
+      - outputs:/app/storage/outputs
     environment:
       - PROCESSING_DIR=/tmp/tts_processing
       - PIPER_MODEL_PATH=/models/piper/en_US-amy-medium.onnx
       - PIPER_CONFIG_PATH=/models/piper/en_US-amy-medium.onnx.json
       - ALLOWED_ORIGINS=http://localhost:3000,http://frontend:3000
+      - MAX_FILE_SIZE=52428800
+      - DEBUG=false
     networks:
       - tts_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
       context: ../
       dockerfile: docker/Dockerfile.frontend
+    image: audio-book-frontend:latest
+    container_name: audio-book-frontend
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NODE_ENV=production
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - tts_network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   tts_processing:
+    driver: local
   models:
+    driver: local
+  uploads:
+    driver: local
+  outputs:
+    driver: local
 
 networks:
   tts_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
