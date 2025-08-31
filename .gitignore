@@ -228,9 +228,7 @@ node_modules/
 # Temporary package files (if not project dependencies)
 backend/package*.json
 test*.txt
-test*.py
 **/test*.txt
-**/test*.py
 
 # Build artifacts
 build/
