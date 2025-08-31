@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  captain-app:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.backend
+    environment:
+      - PROCESSING_DIR=/tmp/tts_processing
+      - PIPER_MODEL_PATH=/models/piper/en_US-amy-medium.onnx
+      - PIPER_CONFIG_PATH=/models/piper/en_US-amy-medium.onnx.json
+      - ALLOWED_ORIGINS=$$cap_cors_origins
+    volumes:
+      - captain-app-data:/tmp/tts_processing
+      - captain-models:/models
+    networks:
+      - captain-overlay-network
+
+volumes:
+  captain-app-data:
+    driver: local
+  captain-models:
+    driver: local
+
+networks:
+  captain-overlay-network:
+    external: true

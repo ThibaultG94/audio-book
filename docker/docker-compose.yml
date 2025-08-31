@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend/app:/app/app
+      - tts_processing:/tmp/tts_processing
+      - models:/models
+    environment:
+      - PROCESSING_DIR=/tmp/tts_processing
+      - PIPER_MODEL_PATH=/models/piper/en_US-amy-medium.onnx
+      - PIPER_CONFIG_PATH=/models/piper/en_US-amy-medium.onnx.json
+      - ALLOWED_ORIGINS=http://localhost:3000,http://frontend:3000
+    networks:
+      - tts_network
+
+  frontend:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - tts_network
+
+volumes:
+  tts_processing:
+  models:
+
+networks:
+  tts_network:
+    driver: bridge
