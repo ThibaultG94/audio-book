@@ -321,3 +321,22 @@ class TextCleaner:
         text = re.sub(r'([.,!?;:])\s*', r'\1 ', text)
         
         # Remove excessive whitespace
+        text = re.sub(r'[ \t]+', ' ', text)
+        
+        # Fix quotes
+        text = re.sub(r'[""]', '"', text)
+        text = re.sub(r'['']', "'", text)
+        
+        # Remove URLs (optional, depending on use case)
+        text = re.sub(r'https?://\S+', '', text)
+        
+        # Clean special characters that might cause TTS issues
+        text = re.sub(r'[^\w\s.,!?;:\'\"-—–\n]', '', text)
+        
+        # Ensure sentences end with proper spacing
+        text = re.sub(r'([.!?])\s*(\w)', r'\1 \2', text)
+        
+        # Add pauses for better TTS rhythm (optional)
+        text = re.sub(r'(\.)\s+', r'\1\n', text)  # New line after sentences
+        
+        return text.strip()
