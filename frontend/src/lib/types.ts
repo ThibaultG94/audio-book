@@ -1,19 +1,17 @@
-// Voice-related types (matching backend models)
-export interface VoiceTechnicalInfo {
-  sample_rate: number;
-  num_speakers: number;
-  model_size: string;
-  architecture?: string;
-}
-
+// Voice-related types
 export interface VoiceMetadata {
   name: string;
   language_code: string;
   gender?: string;
   age?: string;
-  dataset?: string;
-  description?: string;
-  recommended_usage: string[];
+  recommended_usage?: string[];
+}
+
+export interface VoiceTechnicalInfo {
+  sample_rate: number;
+  num_speakers: number;
+  model_size: string;
+  quality?: string;
 }
 
 export interface Voice {
@@ -22,46 +20,31 @@ export interface Voice {
   config_path: string;
   metadata: VoiceMetadata;
   technical_info: VoiceTechnicalInfo;
-  quality?: VoiceQuality;
   available: boolean;
 }
 
-export interface VoiceQuality {
-  naturalness: number;
-  clarity: number;
-  expressiveness: number;
+export interface PreviewVoiceInfo {
+  model_path: string;
+  name: string;
+  dataset?: string;
+  quality?: string;
+  file_size_mb?: number;
+  sample_rate?: number;
+  language?: string;
+  gender?: string;
+  recommended_usage?: string[];
 }
 
 export interface VoicesListResponse {
   voices: Voice[];
   count: number;
-  default_voice?: string;
-}
-
-// Preview-specific voice info (from preview endpoint)
-export interface PreviewVoiceInfo {
-  model_path: string;
-  name: string;
-  full_path: string;
-  language?: {
-    code: string;
-    family: string;
-    region: string;
-    name_native: string;
-    name_english: string;
-    country_english: string;
-  };
-  dataset?: string;
-  quality?: string;
-  sample_rate?: number;
-  file_size_mb?: number;
-  recommended_usage: string[];
+  default_voice: string;
 }
 
 export interface PreviewVoicesListResponse {
   voices: PreviewVoiceInfo[];
-  default_voice: string;
   count: number;
+  default_voice: string;
   recommendations: {
     fastest: string;
     highest_quality: string;
@@ -73,7 +56,7 @@ export interface PreviewVoicesListResponse {
 // TTS Preview types
 export interface TTSPreviewRequest {
   text: string;
-  voice_model?: string;
+  voice_model: string;
   length_scale?: number;
   noise_scale?: number;
   noise_w?: number;
@@ -92,108 +75,130 @@ export interface TTSPreviewResponse {
     noise_w: number;
     sentence_silence: number;
   };
-  voice_info?: PreviewVoiceInfo;
 }
 
-// File upload types
+// File upload types - CORRECTED
 export interface FileUploadResponse {
   file_id: string;
   filename: string;
-  file_size: number;
-  content_type: string;
-  upload_path: string;
+  file_size?: number; // Made optional
+  content_type?: string; // Made optional
+  upload_path?: string; // Made optional
 }
 
 // Conversion types
 export interface ConversionRequest {
   file_id: string;
-  voice_model?: string;
-  length_scale?: number;
-  noise_scale?: number;
-  noise_w?: number;
-  sentence_silence?: number;
+  voice_model: string;
+  length_scale: number;
+  noise_scale: number;
+  noise_w: number;
+  sentence_silence: number;
+  output_format: string;
 }
 
 export interface ConversionResponse {
   job_id: string;
-  status: ConversionStatus;
-  created_at: string;
-}
-
-export enum ConversionStatus {
-  PENDING = "pending",
-  PROCESSING = "processing", 
-  COMPLETED = "completed",
-  FAILED = "failed"
+  status: string;
+  message: string;
 }
 
 export interface ConversionStatusResponse {
   job_id: string;
-  status: ConversionStatus;
-  progress_percent: number;
-  created_at: string;
+  status: string;
+  progress: number;
+  started_at: string;
   completed_at?: string;
-  audio_file_url?: string;
-  error_message?: string;
+  error?: string;
+  steps: {
+    extraction: { status: string; progress: number };
+    processing: { status: string; progress: number };
+    synthesis: { status: string; progress: number };
+    finalization: { status: string; progress: number };
+  };
+  output_file?: string;
+  duration_estimate?: number;
+  chapters: Array<{
+    id: string;
+    title: string;
+    status: string;
+    text_length?: number;
+    audio_file?: string;
+  }>;
 }
 
-// Default TTS parameters
-export interface TTSParameters {
-  length_scale: {
-    default: number;
-    range: [number, number];
-    step: number;
-    description: string;
-    explanation: string;
-  };
-  noise_scale: {
-    default: number;
-    range: [number, number];
-    step: number;
-    description: string;
-    explanation: string;
-  };
-  noise_w: {
-    default: number;
-    range: [number, number];
-    step: number;
-    description: string;
-    explanation: string;
-  };
-  sentence_silence: {
-    default: number;
-    range: [number, number];
-    step: number;
-    description: string;
-    explanation: string;
-  };
-}
-
-export interface TTSPresets {
-  audiobook_natural: {
-    length_scale: number;
-    noise_scale: number;
-    noise_w: number;
-    sentence_silence: number;
-    description: string;
-  };
-  news_fast: {
-    length_scale: number;
-    noise_scale: number;
-    noise_w: number;
-    sentence_silence: number;
-    description: string;
-  };
-  storytelling: {
-    length_scale: number;
-    noise_scale: number;
-    noise_w: number;
-    sentence_silence: number;
-    description: string;
-  };
-}
-
+// Default parameters
 export interface DefaultParametersResponse {
-  parameters: TTSParameters;
-  presets: TTSPresets;
+  parameters: {
+    length_scale: {
+      default: number;
+      range: [number, number];
+      step: number;
+      description: string;
+    };
+    noise_scale: {
+      default: number;
+      range: [number, number];
+      step: number;
+      description: string;
+    };
+    noise_w: {
+      default: number;
+      range: [number, number];
+      step: number;
+      description: string;
+    };
+    sentence_silence: {
+      default: number;
+      range: [number, number];
+      step: number;
+      description: string;
+    };
+  };
+  presets: {
+    audiobook_natural: {
+      length_scale: number;
+      noise_scale: number;
+      noise_w: number;
+      sentence_silence: number;
+      description: string;
+    };
+    news_fast: {
+      length_scale: number;
+      noise_scale: number;
+      noise_w: number;
+      sentence_silence: number;
+      description: string;
+    };
+    storytelling: {
+      length_scale: number;
+      noise_scale: number;
+      noise_w: number;
+      sentence_silence: number;
+      description: string;
+    };
+  };
+}
+
+// Component props
+export interface VoiceSelectionPanelProps {
+  onVoiceSelect: (voice: PreviewVoiceInfo) => void;
+  onStartConversion: () => void;
+}
+
+export interface VoicePreviewProps {
+  onVoiceTest?: (voiceModel: string, settings: VoiceSettings) => void;
+  className?: string;
+}
+
+export interface VoiceSettings {
+  length_scale: number;
+  noise_scale: number;
+  noise_w: number;
+  sentence_silence: number;
+}
+
+export interface FileUploadProps {
+  onFileUploaded: (response: FileUploadResponse) => void;
+  isLoading: boolean;
 }

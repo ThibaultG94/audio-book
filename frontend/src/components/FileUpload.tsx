@@ -9,7 +9,7 @@ interface FileUploadProps {
   isLoading: boolean;
 }
 
-export function FileUpload({ onFileUploaded, isLoading }: FileUploadProps) {
+export default function FileUpload({ onFileUploaded, isLoading }: FileUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);

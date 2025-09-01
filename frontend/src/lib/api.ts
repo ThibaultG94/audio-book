@@ -13,7 +13,7 @@ import {
   VoiceTechnicalInfo,
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public response?: any) {
@@ -41,13 +41,20 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
-    // Default headers - don't set Content-Type for FormData
-    const headers: Record<string, string> = {
-      ...options.headers,
-    };
-    
+    // Build headers properly
+    const headers: HeadersInit = {};
+
+    // Copy existing headers if they're an object
+    if (
+      options.headers &&
+      typeof options.headers === "object" &&
+      !Array.isArray(options.headers)
+    ) {
+      Object.assign(headers, options.headers);
+    }
+
     // Only add JSON Content-Type if we're not sending FormData
-    if (!(options.body instanceof FormData)) {
+    if (!(options.body instanceof FormData) && options.body) {
       headers["Content-Type"] = "application/json";
     }
 
@@ -89,7 +96,7 @@ class ApiClient {
       // Network or other errors
       if (error instanceof TypeError && error.message.includes("fetch")) {
         throw new ApiError(
-          "Backend non accessible - vérifiez que FastAPI tourne sur le port 8000",
+          "Backend non accessible - vérifiez que FastAPI tourne sur le port 8001",
           0
         );
       }
@@ -119,14 +126,10 @@ class ApiClient {
   }
 
   /**
-   * POST request with FormData (for file uploads)
+   * DELETE request
    */
-  async postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: "POST",
-      body: formData,
-      headers: {}, // Let browser set Content-Type for FormData
-    });
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: "DELETE" });
   }
 
   // Health check
@@ -178,9 +181,7 @@ class ApiClient {
   }
 
   async deletePreview(previewId: string): Promise<{ message: string }> {
-    return this.request(`/api/preview/audio/${previewId}`, {
-      method: "DELETE",
-    });
+    return this.delete<{ message: string }>(`/api/preview/audio/${previewId}`);
   }
 
   async cleanupOldPreviews(maxAgeHours: number = 24): Promise<{
@@ -196,13 +197,44 @@ class ApiClient {
     const formData = new FormData();
     formData.append("file", file);
 
-    return this.postFormData<FileUploadResponse>("/api/upload/file", formData);
+    const response = await fetch(`${this.baseUrl}/api/upload/file`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage = "Upload failed";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorData.message || errorMessage;
+      } catch {
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new ApiError(errorMessage, response.status);
+    }
+
+    const data = await response.json();
+
+    // Ensure the response conforms to FileUploadResponse
+    return {
+      file_id: data.file_id,
+      filename: data.filename,
+      file_size: data.file_size,
+      content_type: data.content_type,
+      upload_path: data.upload_path,
+    } as FileUploadResponse;
   }
 
   // Conversion methods
-  async startConversion(
-    request: ConversionRequest
-  ): Promise<ConversionResponse> {
+  async startConversion(request: {
+    file_id: string;
+    voice_model: string;
+    length_scale: number;
+    noise_scale: number;
+    noise_w: number;
+    sentence_silence: number;
+    output_format: string;
+  }): Promise<ConversionResponse> {
     return this.post<ConversionResponse>("/api/convert/start", request);
   }
 

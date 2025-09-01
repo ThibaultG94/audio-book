@@ -1,398 +1,438 @@
 # 🎧 Audio Book Converter
 
-Convert PDF and EPUB documents to high-quality audiobooks using AI-powered text-to-speech technology with Piper TTS. Modern web application with FastAPI backend and Next.js frontend.
+Convert PDF and EPUB documents to high-quality audiobooks using AI-powered text-to-speech with Piper TTS. Modern web application with FastAPI backend and Next.js frontend.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.8+ with pip
 - Node.js 18+ with npm
 - Piper TTS installed (`pip install piper-tts`)
+- 2GB free disk space for voice models
 
-### Development Setup
+### Installation
 
 ```bash
-# 1. Backend (FastAPI) - Port 8001
+# Clone repository
+git clone https://github.com/your-repo/audiobook-converter.git
+cd audiobook-converter
+
+# Backend setup
 cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 
-# 2. Frontend (Next.js) - Port 3001  
-cd frontend
+# Frontend setup
+cd ../frontend
 npm install
 echo "NEXT_PUBLIC_API_URL=http://localhost:8001" > .env.local
-npm run dev
+
+# Download voice models (optional - basic voices included)
+cd ../backend/voices
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx.json
 ```
 
-### Access the Application
-- **Frontend**: http://localhost:3001 (main application)
-- **Backend API**: http://localhost:8001 (REST API)
-- **API Documentation**: http://localhost:8001/docs (if DEBUG=True)
+### Running the Application
+
+```bash
+# Terminal 1 - Start backend
+cd backend
+source venv/bin/activate
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+
+# Terminal 2 - Start frontend
+cd frontend
+npm run dev -- --port 3001
+```
+
+Access the application:
+
+- **Frontend**: http://localhost:3001
+- **Backend API**: http://localhost:8001
+- **API Documentation**: http://localhost:8001/docs
 
 ## ✨ Features
 
 ### 🎤 Advanced Voice System
-- **7 French TTS Voices** with quality levels (Siwis, Tom, Gilles, MLS, UPMC...)
-- **Voice Recommendations** based on usage (audiobook, news, storytelling)
-- **Real-time Voice Preview** with custom text testing
-- **Advanced Parameters**: speed, expressiveness, phonetic variation, sentence pauses
-- **Smart Presets**: audiobook natural, news fast, storytelling expressive
 
-### 📚 Document Processing  
-- **PDF Support** with text extraction and structure preservation
+- **7 French TTS Voices** with different quality levels (Siwis, Tom, Gilles, MLS, UPMC)
+- **Visual Voice Selection** with prominent card-based interface
+- **Real-time Voice Preview** with customizable parameters
+- **Smart Recommendations** based on use case (audiobook, news, storytelling)
+- **Advanced TTS Parameters**: speed, expressiveness, phonetic variation, pauses
+
+### 📚 Document Processing
+
+- **PDF Support** with intelligent text extraction
 - **EPUB Support** for native ebook processing
-- **File Validation** with drag & drop interface
-- **Progress Tracking** with visual step indicators
-- **Error Handling** with detailed user feedback
+- **Automatic Chapter Detection** and segmentation
+- **Text Cleaning** with punctuation preservation
+- **File Size Limit**: 50MB per document
+
+### 🎯 Conversion Pipeline
+
+- **Multi-step Process**: extraction → processing → synthesis → finalization
+- **Real-time Progress Tracking** with visual indicators
+- **Chapter-by-chapter Progress** display
+- **Duration Estimation** for completed audiobooks
+- **Error Recovery** with detailed error messages
 
 ### 🎨 Modern UI/UX
-- **Responsive Design** with Tailwind CSS gradients
-- **Interactive Components** with smooth animations
-- **Real-time Feedback** for all user actions
-- **Accessibility Features** with keyboard navigation
-- **Mobile Optimized** for all screen sizes
 
-### ⚡ Backend Performance
-- **FastAPI Framework** with async processing
-- **Chunked Processing** for optimal audio generation
-- **Comprehensive API** with full error handling
-- **File Management** with automatic cleanup
-- **Extensible Architecture** for future enhancements
+- **Responsive Design** with Tailwind CSS
+- **Smooth Animations** and transitions
+- **Drag & Drop** file upload
+- **Accessibility** with keyboard navigation
+- **Mobile Optimized** for all screen sizes
 
 ## 🏗️ Architecture
 
 ### Tech Stack
-- **Backend**: Python FastAPI + Pydantic + Piper TTS
-- **Frontend**: Next.js 15 + TypeScript + Tailwind CSS
-- **Audio Engine**: Piper TTS (offline neural text-to-speech)
-- **Storage**: Local filesystem with organized structure
-- **Development**: Hot reload, TypeScript strict mode
 
-### Key Components
+#### Backend (Port 8001)
+
+- **Framework**: FastAPI with async/await support
+- **TTS Engine**: Piper TTS for neural voice synthesis
+- **Text Extraction**: PyPDF2 for PDFs, EbookLib for EPUBs
+- **Audio Processing**: Wave, pydub for audio manipulation
+- **Testing**: pytest with coverage reports
+
+#### Frontend (Port 3001)
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript with strict mode
+- **Styling**: Tailwind CSS with custom gradients
+- **State Management**: React hooks (useState, useEffect)
+- **API Client**: Custom client with error handling
+
+### Project Structure
 
 ```
-audio-book-converter/
-├── backend/                          # Python FastAPI backend
+audiobook-converter/
+├── backend/
 │   ├── app/
-│   │   ├── main.py                   # FastAPI application entry point
-│   │   ├── api/routes/               # API endpoints
-│   │   │   ├── voice.py              # Voice management
-│   │   │   ├── preview.py            # TTS previews
-│   │   │   ├── upload.py             # File uploads
-│   │   │   ├── convert.py            # Main conversion
-│   │   │   └── audio.py              # Audio serving
-│   │   ├── services/                 # Business logic
-│   │   │   ├── tts_engine.py         # Core TTS engine
-│   │   │   ├── preview_tts.py        # Preview service
-│   │   │   ├── text_processor.py     # Text processing
-│   │   │   └── audio_processor.py    # Audio post-processing
-│   │   ├── models/                   # Pydantic schemas
-│   │   │   └── voice.py              # Voice models
-│   │   └── core/                     # Configuration & exceptions
-│   ├── voices/                       # TTS voice models (.onnx files)
-│   └── storage/                      # File storage (uploads + outputs)
-└── frontend/                         # Next.js frontend
-    ├── src/
-    │   ├── app/                      # Next.js App Router
-    │   │   ├── page.tsx              # Main page
-    │   │   └── convert/[id]/         # Conversion status page
-    │   ├── components/               # React components
-    │   │   ├── VoiceSelector.tsx     # Advanced voice selection
-    │   │   ├── VoicePreview.tsx      # Voice preview interface
-    │   │   ├── FileUpload.tsx        # Drag & drop upload
-    │   │   └── ConversionStatus.tsx  # Progress tracking
-    │   └── lib/                      # API client and types
-    │       ├── api.ts                # HTTP client with error handling
-    │       └── types.ts              # TypeScript definitions
-    └── public/                       # Static assets
+│   │   ├── main.py                 # FastAPI application entry
+│   │   ├── api/routes/             # API endpoints
+│   │   │   ├── voice.py            # Voice management
+│   │   │   ├── preview.py          # TTS preview
+│   │   │   ├── upload.py           # File upload
+│   │   │   ├── convert.py          # Conversion pipeline
+│   │   │   └── audio.py            # Audio serving
+│   │   ├── services/               # Business logic
+│   │   │   ├── tts_engine.py       # Piper TTS integration
+│   │   │   ├── text_extractor.py   # Document parsing
+│   │   │   ├── text_processor.py   # Text cleaning
+│   │   │   └── conversion_service.py # Conversion orchestration
+│   │   ├── models/                 # Data models
+│   │   └── core/                   # Configuration
+│   ├── voices/                     # Voice model files
+│   ├── storage/                    # File storage
+│   └── tests/                      # Test suite
+├── frontend/
+│   ├── src/
+│   │   ├── app/                    # Next.js pages
+│   │   ├── components/             # React components
+│   │   │   ├── VoiceSelector.tsx   # Voice selection UI
+│   │   │   ├── VoicePreview.tsx    # Voice testing
+│   │   │   ├── FileUpload.tsx      # File upload
+│   │   │   └── ConversionStatus.tsx # Progress tracking
+│   │   └── lib/                    # Utilities
+│   │       ├── api.ts              # API client
+│   │       └── types.ts            # TypeScript types
+│   └── public/                     # Static assets
+└── deployment/                     # Docker/CapRover configs
 ```
 
-## 🔧 API Endpoints
-
-### Voice Management
-- `GET /api/voice/list` - Complete voice list with metadata
-- `GET /api/preview/voices` - Voices with recommendations
-- `GET /api/voice/{voice_id}` - Detailed voice information
-- `POST /api/preview/tts` - Generate voice preview
-- `GET /api/preview/parameters/defaults` - Default TTS parameters
-
-### File Processing
-- `POST /api/upload/file` - Upload PDF/EPUB document
-- `POST /api/convert/start` - Start conversion job
-- `GET /api/convert/status/{job_id}` - Get conversion progress
-
-### Audio Serving
-- `GET /api/audio/{job_id}` - Stream audio file
-- `GET /api/audio/{job_id}/download` - Download audio file
-- `GET /api/preview/audio/{preview_id}` - Preview audio file
-
-### Utility
-- `GET /health` - Service health check
-- `POST /api/preview/cleanup` - Clean old preview files
-
-## 🎛️ Configuration
-
-### Backend Configuration (`backend/app/core/config.py`)
-
-```python
-# TTS Settings
-DEFAULT_VOICE_MODEL = "fr_FR-siwis-low"
-DEFAULT_LENGTH_SCALE = 1.0      # Speech speed (0.5-2.0)
-DEFAULT_NOISE_SCALE = 0.667     # Expressiveness (0.0-1.0)
-DEFAULT_NOISE_W = 0.8           # Phonetic variation (0.0-1.0)
-DEFAULT_SENTENCE_SILENCE = 0.35 # Pause between sentences
-
-# File Processing
-MAX_FILE_SIZE = 52428800        # 50MB max file size
-ALLOWED_EXTENSIONS = {".pdf", ".epub"}
-
-# Storage Paths
-STORAGE_BASE_PATH = Path("storage")
-VOICES_BASE_PATH = Path("voices")
-```
+## 🔧 Configuration
 
 ### Environment Variables
 
-**Backend (`.env`)**:
+#### Backend (.env)
+
 ```bash
+# Application
 DEBUG=true
-APP_NAME="TTS Audio Book Converter"
+APP_NAME="Audio Book Converter"
+VERSION="1.0.0"
+
+# Server
 HOST=0.0.0.0
 PORT=8001
+
+# CORS
+ALLOWED_ORIGINS=["http://localhost:3000", "http://localhost:3001"]
+
+# TTS Configuration
+DEFAULT_VOICE_MODEL=fr_FR-siwis-low
+DEFAULT_LENGTH_SCALE=1.0
+DEFAULT_NOISE_SCALE=0.667
+DEFAULT_NOISE_W=0.8
+DEFAULT_SENTENCE_SILENCE=0.35
+
+# File Processing
+MAX_FILE_SIZE=52428800  # 50MB
+ALLOWED_EXTENSIONS=[".pdf", ".epub"]
 ```
 
-**Frontend (`.env.local`)**:
+#### Frontend (.env.local)
+
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8001
 ```
 
-## 🎤 Voice Configuration
-
-### Available Voices (7 French voices)
-
-| Voice | Gender | Quality | Use Case | Size |
-|-------|--------|---------|----------|------|
-| `fr_FR-siwis-low` | Female | Low | Quick previews | ~60MB |
-| `fr_FR-siwis-medium` | Female | Medium | Balanced quality | ~120MB |
-| `fr_FR-mls-medium` | Female | Medium | Natural speech | ~150MB |
-| `fr_FR-tom-medium` | Male | Medium | Storytelling | ~100MB |
-| `fr_FR-gilles-low` | Male | Low | News/factual | ~60MB |
-| `fr_FR-upmc-medium` | Neutral | Medium | Professional | ~130MB |
-| `fr_FR-mls_1840-low` | Female | Low | Conversation | ~80MB |
-
 ### TTS Parameters
 
-- **`length_scale`** (0.5-2.0): Speech speed control
-- **`noise_scale`** (0.0-1.0): Expressiveness and emotion
-- **`noise_w`** (0.0-1.0): Phonetic variation for naturalness  
-- **`sentence_silence`** (0.0-2.0): Pause duration between sentences
+| Parameter          | Range   | Description                 |
+| ------------------ | ------- | --------------------------- |
+| `length_scale`     | 0.5-2.0 | Speech speed (1.0 = normal) |
+| `noise_scale`      | 0.0-1.0 | Voice expressiveness        |
+| `noise_w`          | 0.0-1.0 | Phonetic variation          |
+| `sentence_silence` | 0.0-2.0 | Pause between sentences     |
 
-### Voice Presets
+## 📡 API Endpoints
 
-- **📚 Audiobook Natural**: Optimized for long-form reading
-- **📰 News Fast**: Quick, clear delivery for information
-- **🎭 Storytelling Expressive**: Maximum emotion for narratives
+### Voice Management
+
+- `GET /api/voice/list` - List all available voices
+- `GET /api/preview/voices` - Get voices with recommendations
+- `POST /api/preview/tts` - Generate voice preview
+
+### File Processing
+
+- `POST /api/upload/file` - Upload PDF/EPUB file
+- `POST /api/convert/start` - Start conversion job
+- `GET /api/convert/status/{job_id}` - Get conversion progress
+- `POST /api/convert/cancel/{job_id}` - Cancel conversion
+- `GET /api/convert/list` - List all conversions
+
+### Audio Serving
+
+- `GET /api/audio/{job_id}` - Stream audio file
+- `GET /api/audio/{job_id}/download` - Download audio file
 
 ## 🧪 Testing
 
-### Manual Testing Workflow
-
-1. **Voice Preview Test**:
-   - Navigate to http://localhost:3001
-   - Select different voices and adjust parameters
-   - Generate previews with custom text
-   - Verify audio playback works
-
-2. **File Upload Test**:
-   - Drag & drop a PDF/EPUB file
-   - Verify file validation and progress
-   - Check error handling for invalid files
-
-3. **Conversion Test**:
-   - Start a conversion with selected voice settings
-   - Monitor progress on conversion status page
-   - Verify final audio download
-
-### API Testing
+### Run Tests
 
 ```bash
-# Health check
-curl http://localhost:8001/health
+# Backend tests
+cd backend
+pytest                          # Run all tests
+pytest --cov=app                # With coverage
+pytest tests/unit/              # Unit tests only
+pytest tests/integration/       # Integration tests only
 
-# List voices
-curl http://localhost:8001/api/preview/voices
-
-# Generate preview
-curl -X POST "http://localhost:8001/api/preview/tts" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": "Hello, this is a test.",
-    "voice_model": "fr_FR-siwis-low",
-    "length_scale": 1.0,
-    "noise_scale": 0.667
-  }'
+# Frontend tests
+cd frontend
+npm test                        # Run test suite
+npm run test:coverage           # With coverage
 ```
 
-## 🛠️ Development
+### Test Structure
 
-### Code Structure
+```
+backend/tests/
+├── conftest.py                 # Shared fixtures
+├── unit/                       # Unit tests
+│   ├── test_conversion_service.py
+│   ├── test_tts_engine.py
+│   └── test_text_processor.py
+└── integration/                # Integration tests
+    ├── test_convert_api.py
+    ├── test_voice_api.py
+    └── test_upload_api.py
+```
 
-**Backend (Python)**:
-- **FastAPI** with async/await for performance
-- **Pydantic v2** for data validation and serialization
-- **Modular design** with clear separation of concerns
-- **Comprehensive error handling** with custom exceptions
-- **Type hints** throughout for better IDE support
+## 🚢 Deployment
 
-**Frontend (TypeScript/React)**:
-- **Next.js 15** with App Router for modern React patterns
-- **TypeScript strict mode** for type safety
-- **Custom hooks** for state management
-- **Component composition** for reusability
-- **Tailwind CSS** for consistent styling
+### Docker
 
-### Development Workflow
+```bash
+# Build image
+docker build -t audiobook-converter:latest .
 
-1. **Start both servers** (backend on 8001, frontend on 3001)
-2. **Make changes** with hot reload enabled
-3. **Test functionality** manually and with API calls
-4. **Verify types** compile correctly
-5. **Check logs** for any errors
+# Run container
+docker run -d \
+  -p 8001:8001 \
+  -p 3001:3001 \
+  -v $(pwd)/voices:/app/backend/voices \
+  audiobook-converter:latest
+```
 
-### Adding New Features
+### CapRover
 
-**New Voice Models**:
-1. Place `.onnx` and `.onnx.json` files in `backend/voices/`
-2. Restart backend to auto-detect
-3. Test with voice preview interface
+1. Create `captain-definition` file:
 
-**New API Endpoints**:
-1. Add route in `backend/app/api/routes/`
-2. Update types in `frontend/src/lib/types.ts`
-3. Add client method in `frontend/src/lib/api.ts`
+```json
+{
+  "schemaVersion": 2,
+  "dockerfilePath": "./Dockerfile"
+}
+```
+
+2. Deploy:
+
+```bash
+caprover deploy
+```
+
+### Production Dockerfile
+
+```dockerfile
+# Backend build
+FROM python:3.11-slim as backend
+WORKDIR /app/backend
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/ .
+
+# Frontend build
+FROM node:18-alpine as frontend
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci --only=production
+COPY frontend/ .
+RUN npm run build
+
+# Production image
+FROM python:3.11-slim
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy from build stages
+COPY --from=backend /app/backend ./backend
+COPY --from=frontend /app/frontend/.next ./frontend/.next
+COPY --from=frontend /app/frontend/public ./frontend/public
+COPY --from=frontend /app/frontend/package*.json ./frontend/
+
+# Install Node.js for frontend
+RUN apt-get update && apt-get install -y nodejs npm
+
+# Create directories
+RUN mkdir -p backend/storage/{uploads,outputs,temp} backend/voices
+
+# Expose ports
+EXPOSE 8001 3001
+
+# Start script
+COPY deployment/start.sh .
+RUN chmod +x start.sh
+CMD ["./start.sh"]
+```
 
 ## 🔍 Troubleshooting
 
 ### Common Issues
 
-**"Backend non accessible"**:
-- Verify backend is running on port 8001
-- Check `.env.local` has correct `NEXT_PUBLIC_API_URL`
-- Ensure no firewall blocking the connection
+#### Voice models not found
 
-**"Voice not found" errors**:
-- Check voice files exist in `backend/voices/` directory
-- Verify file permissions allow reading
-- Restart backend after adding new voices
-
-**"Import errors" in frontend**:
-- Clear Next.js cache: `rm -rf frontend/.next`
-- Reinstall dependencies: `cd frontend && npm install`
-- Check TypeScript compilation: `npm run build`
-
-**"Piper not found" errors**:
-- Install Piper TTS: `pip install piper-tts`
-- Verify installation: `which piper`
-- Check PATH environment variable
-
-### Debug Mode
-
-**Backend debugging**:
 ```bash
-cd backend
-DEBUG=true python -m uvicorn app.main:app --reload --log-level debug
+# Download French voices
+cd backend/voices
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/low/fr_FR-siwis-low.onnx.json
 ```
 
-**Frontend debugging**:
+#### Piper TTS not installed
+
 ```bash
-cd frontend
-npm run dev -- --inspect
+pip install piper-tts
+# or download binary
+wget https://github.com/rhasspy/piper/releases/download/v1.2.0/piper_amd64.tar.gz
+tar -xzf piper_amd64.tar.gz
+sudo mv piper /usr/local/bin/
 ```
 
-### Health Checks
+#### Frontend can't connect to backend
 
 ```bash
-# Backend health
+# Check backend is running
 curl http://localhost:8001/health
 
-# Voice availability
-curl http://localhost:8001/api/preview/voices | jq '.count'
-
-# Frontend accessibility
-curl -I http://localhost:3001
+# Verify environment variable
+cat frontend/.env.local
+# Should contain: NEXT_PUBLIC_API_URL=http://localhost:8001
 ```
 
-## 📦 Deployment
+#### CORS errors
 
-### Production Considerations
+Ensure backend CORS settings include frontend URL:
 
-- Set `DEBUG=false` in production
-- Use proper HTTPS certificates
-- Configure CORS for production domains
-- Set up file storage with proper permissions
-- Monitor disk space for audio files
-- Configure log rotation
-
-### Docker Deployment (Optional)
-
-```dockerfile
-# Multi-stage build combining backend and frontend
-FROM python:3.11-slim as backend
-WORKDIR /app/backend
-COPY backend/requirements.txt .
-RUN pip install -r requirements.txt
-COPY backend/ .
-
-FROM node:18-alpine as frontend
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci
-COPY frontend/ .
-RUN npm run build
-
-FROM python:3.11-slim as production
-WORKDIR /app
-COPY --from=backend /app/backend .
-COPY --from=frontend /app/frontend/out ./static
-EXPOSE 8001
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+```python
+# backend/app/core/config.py
+ALLOWED_ORIGINS = ["http://localhost:3001"]
 ```
 
-## 🎯 Current Status
+## 📊 Performance
 
-### ✅ Fully Functional Features
-
-- **Voice System**: 7 voices with preview and recommendations
-- **File Processing**: PDF/EPUB upload with validation
-- **TTS Engine**: Advanced parameter control with presets
-- **UI/UX**: Modern responsive interface with animations
-- **API**: Complete REST API with error handling
-- **Progress Tracking**: Real-time conversion status
-- **Audio Playback**: Integrated player with download
-
-### 🚀 Performance Metrics
+### Benchmarks
 
 - **Voice Preview**: ~2-3 seconds generation time
-- **File Upload**: Supports up to 50MB files
-- **Conversion Speed**: ~1 minute per 1000 characters
-- **Memory Usage**: ~200MB base + ~100MB per concurrent job
-- **Storage Efficiency**: Automatic cleanup of temporary files
+- **Text Extraction**: ~1 second per 100 pages
+- **Audio Generation**: ~1 minute per 1000 characters
+- **Memory Usage**: ~200MB base + 100MB per concurrent job
+- **Max File Size**: 50MB (configurable)
+
+### Optimization Tips
+
+1. Use low-quality voices for faster processing
+2. Implement caching for voice previews
+3. Use job queue (Celery) for large conversions
+4. Enable gzip compression in production
+5. Use CDN for static assets
+
+## 🤝 Contributing
+
+### Development Workflow
+
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'feat: add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open Pull Request
+
+### Commit Convention
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation
+- `style:` Code style
+- `refactor:` Code refactoring
+- `test:` Tests
+- `chore:` Maintenance
+
+### Code Style
+
+- **Python**: Black formatter, PEP8
+- **TypeScript**: ESLint + Prettier
+- **Tests**: Minimum 80% coverage
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file for details
 
 ## 🙏 Acknowledgments
 
-- **[Piper TTS](https://github.com/rhasspy/piper)** - High-quality neural text-to-speech engine
-- **[FastAPI](https://fastapi.tiangolo.com/)** - Modern Python web framework
-- **[Next.js](https://nextjs.org/)** - React framework for production
-- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
+- [Piper TTS](https://github.com/rhasspy/piper) - Neural text-to-speech engine
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
+- [Next.js](https://nextjs.org/) - React framework for production
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/your-repo/audiobook-converter/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-repo/audiobook-converter/discussions)
+- **Documentation**: [Wiki](https://github.com/your-repo/audiobook-converter/wiki)
 
 ---
 
-**Ready to use! Access your application at: http://localhost:3001**
-
-*Powered by Piper TTS • AI-driven natural voice synthesis*
+**Made with ❤️ by the AudioBook Converter Team**

@@ -1,68 +1,67 @@
-"""
-Pytest configuration and shared fixtures
-"""
+"""Pytest configuration and shared fixtures."""
+
 import pytest
 import tempfile
-import shutil
 from pathlib import Path
+from fastapi.testclient import TestClient
+from unittest.mock import Mock, patch
+
+from app.main import app
+from app.core.config import settings
 
 
 @pytest.fixture
-def temp_directory():
-    """Create a temporary directory for tests"""
-    temp_dir = tempfile.mkdtemp()
-    yield Path(temp_dir)
-    shutil.rmtree(temp_dir, ignore_errors=True)
+def client():
+    """Create test client for FastAPI app."""
+    return TestClient(app)
 
 
 @pytest.fixture
-def mock_epub_file(temp_directory):
-    """Create a mock EPUB file"""
-    epub_file = temp_directory / "test.epub"
-    epub_file.write_bytes(b"fake epub content")
-    return epub_file
+def temp_dir():
+    """Create temporary directory for test files."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield Path(tmpdir)
 
 
 @pytest.fixture
-def mock_pdf_file(temp_directory):
-    """Create a mock PDF file"""
-    pdf_file = temp_directory / "test.pdf"
-    pdf_file.write_bytes(b"fake pdf content")
+def mock_voice_file(temp_dir):
+    """Create mock voice model file."""
+    voice_file = temp_dir / "test_voice.onnx"
+    voice_file.write_text("mock voice model")
+    return voice_file
+
+
+@pytest.fixture
+def mock_pdf_file(temp_dir):
+    """Create mock PDF file."""
+    pdf_file = temp_dir / "test.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4 test content")
     return pdf_file
 
 
 @pytest.fixture
-def sample_manifest():
-    """Create a sample manifest for testing"""
-    return {
-        "book_id": "test_book_123",
-        "book_title": "Test Book",
-        "author": "Test Author",
-        "total_chapters": 3,
-        "chapters": [
-            {
-                "index": 0,
-                "title": "Chapter 1",
-                "filename": "001_TestBook_Chapter1",
-                "text_file": "/tmp/ch1.txt",
-                "status": "pending",
-                "estimated_duration_seconds": 300
-            },
-            {
-                "index": 1,
-                "title": "Chapter 2",
-                "filename": "002_TestBook_Chapter2",
-                "text_file": "/tmp/ch2.txt",
-                "status": "pending",
-                "estimated_duration_seconds": 450
-            },
-            {
-                "index": 2,
-                "title": "Chapter 3",
-                "filename": "003_TestBook_Chapter3",
-                "text_file": "/tmp/ch3.txt",
-                "status": "pending",
-                "estimated_duration_seconds": 600
-            }
-        ]
-    }
+def mock_piper_command():
+    """Mock piper TTS command."""
+    with patch('subprocess.run') as mock_run:
+        mock_run.return_value = Mock(
+            returncode=0,
+            stdout=b"mock audio data",
+            stderr=b""
+        )
+        yield mock_run
+
+
+@pytest.fixture(autouse=True)
+def setup_test_environment(temp_dir, monkeypatch):
+    """Setup test environment with temporary directories."""
+    # Override settings for tests
+    monkeypatch.setattr(settings, "UPLOAD_DIR", temp_dir / "uploads")
+    monkeypatch.setattr(settings, "OUTPUT_DIR", temp_dir / "outputs")
+    monkeypatch.setattr(settings, "TEMP_DIR", temp_dir / "temp")
+    monkeypatch.setattr(settings, "VOICES_BASE_PATH", temp_dir / "voices")
+    
+    # Create directories
+    (temp_dir / "uploads").mkdir(exist_ok=True)
+    (temp_dir / "outputs").mkdir(exist_ok=True)
+    (temp_dir / "temp").mkdir(exist_ok=True)
+    (temp_dir / "voices").mkdir(exist_ok=True)

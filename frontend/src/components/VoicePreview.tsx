@@ -2,23 +2,17 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { api, ApiError } from '@/lib/api'
-import type { TTSPreviewRequest, TTSPreviewResponse, DefaultParametersResponse } from '@/lib/types'
-import VoiceSelector from './VoiceSelector'
-
-interface VoiceSettings {
-  length_scale: number
-  noise_scale: number
-  noise_w: number
-  sentence_silence: number
-}
+import type { TTSPreviewRequest, TTSPreviewResponse, DefaultParametersResponse, PreviewVoiceInfo, VoiceSettings } from '@/lib/types'
+import VoiceSelectionPanel from './VoiceSelectionPanel'
 
 interface VoicePreviewProps {
-  onVoiceTest?: (voice: string, settings: VoiceSettings) => void
+  onVoiceTest?: (voiceModel: string, settings: VoiceSettings) => void
   className?: string
 }
 
 export default function VoicePreview({ onVoiceTest, className = "" }: VoicePreviewProps) {
-  const [selectedVoice, setSelectedVoice] = useState<string>("")
+  const [selectedVoiceModel, setSelectedVoiceModel] = useState<string>("")
+  const [selectedVoiceInfo, setSelectedVoiceInfo] = useState<PreviewVoiceInfo | null>(null)
   const [previewText, setPreviewText] = useState(
     "Bonjour ! Ceci est un aperçu de la voix française pour la conversion de vos livres audio. Vous pouvez ajuster la vitesse, l'expressivité et d'autres paramètres selon vos préférences."
   )
@@ -45,8 +39,8 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
 
   // Notify parent when settings change (only if voice is already selected)
   useEffect(() => {
-    if (selectedVoice && onVoiceTest) {
-      onVoiceTest(selectedVoice, settings)
+    if (selectedVoiceModel && onVoiceTest) {
+      onVoiceTest(selectedVoiceModel, settings)
     }
   }, [settings.length_scale, settings.noise_scale, settings.noise_w, settings.sentence_silence])
 
@@ -87,6 +81,16 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
     }
   }
 
+  const handleVoiceSelect = (voice: PreviewVoiceInfo) => {
+    setSelectedVoiceModel(voice.model_path)
+    setSelectedVoiceInfo(voice)
+    
+    // Notify parent with voice model path and current settings
+    if (onVoiceTest) {
+      onVoiceTest(voice.model_path, settings)
+    }
+  }
+
   const applyPreset = (presetName: string) => {
     if (!defaultParams?.presets) return
     
@@ -113,7 +117,7 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
       return
     }
 
-    if (!selectedVoice) {
+    if (!selectedVoiceModel) {
       setError("Veuillez sélectionner une voix")
       return
     }
@@ -124,7 +128,7 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
     try {
       const request: TTSPreviewRequest = {
         text: previewText,
-        voice_model: selectedVoice,
+        voice_model: selectedVoiceModel,
         length_scale: settings.length_scale,
         noise_scale: settings.noise_scale,
         noise_w: settings.noise_w,
@@ -137,7 +141,7 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
         throw new Error("Réponse invalide - pas d'URL audio")
       }
       
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'
       const fullAudioUrl = `${API_BASE_URL}${response.audio_url}`
       setCurrentAudioUrl(fullAudioUrl)
       setCurrentPreviewId(response.preview_id)
@@ -153,8 +157,8 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
         }
       }
 
-      // Notify parent component with settings
-      onVoiceTest?.(selectedVoice, settings)
+      // Notify parent component with voice model path
+      onVoiceTest?.(selectedVoiceModel, settings)
 
     } catch (err) {
       console.error("Preview generation error:", err)
@@ -167,7 +171,7 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
       }
       
       if (errorMessage.includes("fetch") || errorMessage.includes("NetworkError")) {
-        errorMessage = "Backend non accessible - vérifiez que FastAPI tourne sur le port 8000"
+        errorMessage = "Backend non accessible - vérifiez que FastAPI tourne sur le port 8001"
       }
       
       setError(errorMessage)
@@ -228,15 +232,11 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
           🎭 Sélection de la voix
         </h3>
-        <VoiceSelector
-          onVoiceSelect={(voice) => {
-            setSelectedVoice(voice)
-            // Immediately notify parent with current settings
-            if (onVoiceTest) {
-              onVoiceTest(voice, settings)
-            }
+        <VoiceSelectionPanel
+          onVoiceSelect={handleVoiceSelect}
+          onStartConversion={() => {
+            console.log('Start conversion from voice preview')
           }}
-          selectedVoice={selectedVoice}
         />
       </div>
 
@@ -408,7 +408,7 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
         <div className="space-y-4">
           <button
             onClick={generatePreview}
-            disabled={isGenerating || !selectedVoice || !previewText.trim()}
+            disabled={isGenerating || !selectedVoiceModel || !previewText.trim()}
             className="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-400 transition-all duration-200"
           >
             {isGenerating ? (
@@ -441,7 +441,7 @@ export default function VoicePreview({ onVoiceTest, className = "" }: VoicePrevi
                 <div>
                   <h4 className="text-sm font-semibold text-gray-900">Aperçu généré ✨</h4>
                   <p className="text-sm text-gray-600">
-                    Voix : {selectedVoice.split('/').pop()?.replace('.onnx', '') || 'Inconnue'}
+                    Voix : {selectedVoiceInfo?.name || selectedVoiceModel.split('/').pop()?.replace('.onnx', '') || 'Inconnue'}
                   </p>
                 </div>
                 <button
