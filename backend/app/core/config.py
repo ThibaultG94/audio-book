@@ -1,57 +1,59 @@
 """Application configuration."""
 
-from pydantic import BaseModel
-from typing import Optional
 from pathlib import Path
+from typing import List
+
+from pydantic_settings import BaseSettings
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     """Application settings."""
     
-    # App info
-    app_name: str = "Audio Book Converter"
-    version: str = "1.0.0"
-    debug: bool = True
+    # Application
+    APP_NAME: str = "Audio Book Converter"
+    VERSION: str = "1.0.0"
+    DEBUG: bool = True
     
-    # API settings
-    api_prefix: str = "/api"
-    allowed_origins: list = ["http://localhost:3000", "http://localhost:3001"]
+    # Server
+    HOST: str = "0.0.0.0"
+    PORT: int = 8001
     
-    # File settings
-    max_file_size: int = 52428800  # 50MB
-    allowed_extensions: list = [".pdf", ".epub", ".txt"]
+    # CORS
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001"
+    ]
     
-    # TTS settings
-    default_voice: str = "en_US-amy-medium"
-    voice_model: str = "en_US-amy-medium.onnx"
-    voice_config: str = "en_US-amy-medium.onnx.json"
-    length_scale: float = 1.0
-    noise_scale: float = 0.667
-    sentence_silence: float = 0.35
+    # Paths - use Path objects
+    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
+    STORAGE_BASE_PATH: Path = BASE_DIR / "storage"
+    UPLOAD_DIR: Path = STORAGE_BASE_PATH / "uploads"
+    OUTPUT_DIR: Path = STORAGE_BASE_PATH / "outputs"
+    TEMP_DIR: Path = STORAGE_BASE_PATH / "temp"
+    VOICES_BASE_PATH: Path = BASE_DIR / "voices"
     
-    # Paths
-    base_dir: Path = Path(__file__).parent.parent
-    storage_dir: Path = base_dir / "storage"
-    uploads_dir: Path = storage_dir / "uploads"
-    outputs_dir: Path = storage_dir / "outputs"
-    temp_dir: Path = storage_dir / "temp"
-    voices_dir: Path = base_dir / "voices"
+    # File Processing
+    MAX_FILE_SIZE: int = 52428800  # 50MB
+    ALLOWED_EXTENSIONS: List[str] = [".pdf", ".epub", ".txt", ".docx", ".rtf"]
     
-    # Processing
-    max_chunk_chars: int = 1500
-    processing_timeout: int = 300  # 5 minutes
+    # TTS Configuration
+    DEFAULT_VOICE_MODEL: str = "fr_FR-siwis-low"
+    DEFAULT_LENGTH_SCALE: float = 1.0
+    DEFAULT_NOISE_SCALE: float = 0.667
+    DEFAULT_NOISE_W: float = 0.8
+    DEFAULT_SENTENCE_SILENCE: float = 0.35
+    DEFAULT_PAUSE_BETWEEN_BLOCKS: float = 1.0
+    
+    # Text Processing
+    MAX_CHUNK_CHARS: int = 1500
     
     class Config:
+        """Pydantic config."""
         env_file = ".env"
-        env_file_encoding = "utf-8"
+        case_sensitive = True
 
 
-# Create global settings instance
+# Create settings instance
 settings = Settings()
-
-# Ensure directories exist
-settings.storage_dir.mkdir(parents=True, exist_ok=True)
-settings.uploads_dir.mkdir(parents=True, exist_ok=True)
-settings.outputs_dir.mkdir(parents=True, exist_ok=True)
-settings.temp_dir.mkdir(parents=True, exist_ok=True)
-settings.voices_dir.mkdir(parents=True, exist_ok=True)

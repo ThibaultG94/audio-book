@@ -42,19 +42,10 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
 
     // Build headers properly
-    const headers: HeadersInit = {};
+    let headers: any = {};
 
-    // Copy existing headers if they're an object
-    if (
-      options.headers &&
-      typeof options.headers === "object" &&
-      !Array.isArray(options.headers)
-    ) {
-      Object.assign(headers, options.headers);
-    }
-
-    // Only add JSON Content-Type if we're not sending FormData
-    if (!(options.body instanceof FormData) && options.body) {
+    // Only add JSON Content-Type if we're sending JSON data
+    if (options.body && !(options.body instanceof FormData)) {
       headers["Content-Type"] = "application/json";
     }
 
@@ -76,7 +67,7 @@ class ApiClient {
           errorMessage = response.statusText || errorMessage;
         }
 
-        throw new ApiError(errorMessage, response.status);
+        throw new ApiError(errorMessage, response.status, response);
       }
 
       // Handle different response types
