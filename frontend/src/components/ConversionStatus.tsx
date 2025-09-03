@@ -1,32 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { api } from '@/lib/api'
-
-// Define the type locally if not exported from types
-interface ConversionStatusResponse {
-  job_id: string
-  status: string
-  progress: number
-  started_at: string
-  completed_at?: string
-  error?: string
-  steps: {
-    extraction: { status: string; progress: number }
-    processing: { status: string; progress: number }
-    synthesis: { status: string; progress: number }
-    finalization: { status: string; progress: number }
-  }
-  output_file?: string
-  duration_estimate?: number
-  chapters: Array<{
-    id: string
-    title: string
-    status: string
-    text_length?: number
-    audio_file?: string
-  }>
-}
+import { api, ConversionStatusResponse } from '@/lib/api'
 
 interface ConversionStatusProps {
   jobId: string
@@ -44,25 +19,27 @@ export default function ConversionStatus({ jobId }: ConversionStatusProps) {
         setStatus(response)
         setError(null)
         
-        // If still processing, check again in 2 seconds
-        if (response.status !== 'completed' && response.status !== 'failed') {
+        // Continue polling if processing
+        if (response.status === 'processing' || response.status === 'pending') {
           setTimeout(checkStatus, 2000)
         }
       } catch (err) {
-        console.error('Error fetching status:', err)
-        setError('Erreur lors de la récupération du statut')
+        setError(err instanceof Error ? err.message : 'Erreur inconnue')
       } finally {
         setLoading(false)
       }
     }
 
-    checkStatus()
+    if (jobId) {
+      checkStatus()
+    }
   }, [jobId])
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
+        <span>Chargement du statut...</span>
       </div>
     )
   }
@@ -70,87 +47,86 @@ export default function ConversionStatus({ jobId }: ConversionStatusProps) {
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <h3 className="text-red-800 font-medium">Erreur</h3>
         <p className="text-red-700">{error}</p>
       </div>
     )
   }
 
-  if (!status) {
-    return null
-  }
+  if (!status) return null
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'text-green-600'
-      case 'failed': return 'text-red-600'
-      case 'processing': 
-      case 'synthesizing': return 'text-blue-600'
-      default: return 'text-gray-600'
+  const getStatusColor = (statusValue: string) => {
+    switch (statusValue) {
+      case 'completed': return 'text-green-600 bg-green-50'
+      case 'processing': return 'text-blue-600 bg-blue-50'
+      case 'failed': return 'text-red-600 bg-red-50'
+      case 'pending': return 'text-yellow-600 bg-yellow-50'
+      default: return 'text-gray-600 bg-gray-50'
     }
   }
 
-  const getStepIcon = (stepStatus: string) => {
-    switch (stepStatus) {
-      case 'completed': return '✅'
-      case 'in_progress': return '⏳'
-      case 'failed': return '❌'
-      default: return '⏸️'
+  const getStatusText = (statusValue: string) => {
+    switch (statusValue) {
+      case 'pending': return 'En attente'
+      case 'processing': return 'En cours'
+      case 'completed': return 'Terminée'
+      case 'failed': return 'Échouée'
+      default: return statusValue
     }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Overall Progress */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Progression de la conversion</h3>
-          <span className={`font-medium ${getStatusColor(status.status)}`}>
-            {status.status}
-          </span>
+    <div className="max-w-2xl mx-auto p-6">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">Conversion en cours</h2>
+        <p className="text-gray-600">Job ID: {status.job_id}</p>
+      </div>
+
+      <div className={`rounded-lg p-4 mb-6 ${getStatusColor(status.status)}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-medium">Statut: {getStatusText(status.status)}</h3>
+            <p className="text-sm opacity-75">
+              Démarré: {new Date(status.started_at).toLocaleString('fr-FR')}
+            </p>
+            {status.completed_at && (
+              <p className="text-sm opacity-75">
+                Terminé: {new Date(status.completed_at).toLocaleString('fr-FR')}
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold">{status.progress}%</div>
+          </div>
         </div>
         
-        <div className="w-full bg-gray-200 rounded-full h-3">
-          <div 
-            className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all duration-500"
-            style={{ width: `${status.progress}%` }}
-          />
-        </div>
-        <p className="text-sm text-gray-600 mt-2">{status.progress}% complété</p>
-      </div>
-
-      {/* Steps Progress */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">Étapes de conversion</h3>
-        <div className="space-y-3">
-          {Object.entries(status.steps).map(([key, step]) => (
-            <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <span>{getStepIcon(step.status)}</span>
-                <span className="font-medium capitalize">{key}</span>
-              </div>
-              <span className="text-sm text-gray-600">{step.status}</span>
-            </div>
-          ))}
+        <div className="mt-4">
+          <div className="bg-white bg-opacity-50 rounded-full h-2">
+            <div 
+              className="h-2 rounded-full bg-current transition-all duration-500"
+              style={{ width: `${status.progress}%` }}
+            ></div>
+          </div>
         </div>
       </div>
 
-      {/* Error Display */}
       {status.error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h4 className="font-medium text-red-800 mb-1">Erreur</h4>
+          <h4 className="text-red-800 font-medium">Erreur</h4>
           <p className="text-red-700">{status.error}</p>
         </div>
       )}
 
-      {/* Success with Download */}
-      {status.status === 'completed' && status.output_file && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-          <h4 className="font-medium text-green-800 mb-3">✅ Conversion terminée !</h4>
-          <button
-            onClick={() => window.open(api.downloadAudio(jobId), '_blank')}
-            className="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white font-medium rounded-lg hover:from-green-600 hover:to-blue-600"
-          >
-            📥 Télécharger l'audiobook
+      {status.status === 'completed' && (
+        <div className="text-center bg-green-50 border border-green-200 rounded-lg p-6">
+          <h3 className="text-green-800 font-medium text-lg mb-2">
+            ✅ Conversion terminée !
+          </h3>
+          <p className="text-green-700 mb-4">
+            Votre livre audio est prêt
+          </p>
+          <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+            📥 Télécharger l'audio
           </button>
         </div>
       )}
